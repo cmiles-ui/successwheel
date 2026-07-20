@@ -181,7 +181,6 @@
 
         document.addEventListener("DOMContentLoaded", function() {
             const rawSlideParam = getUrlParam('slide') || 'id.p';
-            // Ensure initial load also uses the normalized prefix footprint
             let cleanSlideId = rawSlideParam.replace(/^id\./gi, '');
             const targetSlide = "id." + cleanSlideId;
 
@@ -208,19 +207,31 @@
             const inputField = document.getElementById('searchInput');
             if (!inputField) return;
              
-            const query = inputField.value.toLowerCase().trim();
+            const rawQuery = inputField.value.toLowerCase().trim();
             const errorDiv = document.getElementById('errorMessage');
 
-            if (!query) { 
+            if (!rawQuery) { 
                 if (errorDiv) errorDiv.style.display = "none"; 
                 return; 
             }
 
             const masterData = window.slideData || [];
             const matches = [];
-             
+            const queryWords = rawQuery.split(/\s+/).filter(w => w.length > 0);
+
             masterData.forEach(item => {
-                if (item.keywords && item.keywords.toLowerCase().includes(query)) {
+                if (!item.keywords) return;
+                const text = item.keywords.toLowerCase();
+
+                // Broad match logic (substring inclusion)
+                let isMatch = text.includes(rawQuery);
+
+                // Multi-word fallback matching (ensures all typed words exist in the text string)
+                if (!isMatch && queryWords.length > 1) {
+                    isMatch = queryWords.every(word => text.includes(word));
+                }
+
+                if (isMatch) {
                     matches.push(item.id);
                 }
             });
@@ -232,12 +243,12 @@
                  
                 sessionStorage.setItem('currentMatches', JSON.stringify(matches));
                 sessionStorage.setItem('currentIndex', '0');
-                sessionStorage.setItem('lastQuery', query);
+                sessionStorage.setItem('lastQuery', rawQuery);
                  
                 executeRedirect(matches[0]);
             } else {
                 if (errorDiv) {
-                    errorDiv.textContent = `"${query}" not found in the Success Wheel.`;
+                    errorDiv.textContent = `"${rawQuery}" not found in the Success Wheel.`;
                     errorDiv.style.display = "block";
                 }
                 const navControls = document.getElementById('navControls');
@@ -273,11 +284,7 @@
 
         function executeRedirect(slideId) {
             const currentUrlWithoutParams = window.location.href.split('?')[0];
-            
-            // Clean out any accidental or double-injected 'id.' string patterns
             let cleanId = slideId.replace(/^id\./gi, '');
-            
-            // Re-apply exactly one 'id.' sequence safely for the presentation handler
             const targetSlide = "id." + cleanId;
             const newUrl = currentUrlWithoutParams + "?slide=" + targetSlide;
              
