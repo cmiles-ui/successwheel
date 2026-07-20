@@ -25,9 +25,10 @@
         }
         .search-box { 
             margin: 0 auto 24px auto; 
-            max-width: 600px; 
+            max-width: 650px; 
             display: flex; 
             gap: 10px; 
+            align-items: center;
         }
         input[type="text"] { 
             flex: 1; 
@@ -40,7 +41,7 @@
         }
         input[type="text"]:focus { border-color: #1a73e8; }
         button { 
-            padding: 14px 28px; 
+            padding: 14px 24px; 
             font-size: 16px; 
             background-color: #1a73e8; 
             color: white; 
@@ -50,6 +51,28 @@
             font-weight: 600; 
         }
         button:hover { background-color: #1557b0; }
+        
+        /* Navigation Controls styles */
+        .nav-controls {
+            display: none; /* Hidden until multiple matches are found */
+            gap: 5px;
+            align-items: center;
+        }
+        .nav-btn {
+            background-color: #f1f3f4;
+            color: #3c4043;
+            padding: 14px 18px;
+            font-size: 16px;
+        }
+        .nav-btn:hover { background-color: #e8eaed; }
+        .match-count {
+            font-size: 14px;
+            color: #5f6368;
+            min-width: 80px;
+            text-align: center;
+            font-weight: 500;
+        }
+
         .error-message { 
             color: #d93025; 
             font-size: 15px; 
@@ -82,8 +105,15 @@
 
     <div class="container">
         <div class="search-box">
-            <input type="text" id="searchInput" placeholder="Search the Success Wheel (e.g., starts, habits, budget)...">
-            <button onclick="searchSlides()">Search</button>
+            <input type="text" id="searchInput" placeholder="Search the Success Wheel (e.g., starts, habits, process)...">
+            <button onclick="startNewSearch()">Search</button>
+            
+            <!-- Dynamic Arrow Navigation Section -->
+            <div class="nav-controls" id="navControls">
+                <button class="nav-btn" onclick="navigateMatches(-1)">◀</button>
+                <span class="match-count" id="matchCount">0 of 0</span>
+                <button class="nav-btn" onclick="navigateMatches(1)">▶</button>
+            </div>
         </div>
         <div id="errorMessage" class="error-message"></div>
 
@@ -110,17 +140,28 @@
 
         const baseUrl = "https://docs.google.com/presentation/d/16m363rm8KbODBF4_73Jt824KoW6NaEQsueUZ_LTdyFU/embed?start=false&loop=false&delayms=3000";
 
-        // Read the target slide ID directly from the browser's address URL on initial load
+        // State recovery to keep search context across page refreshes
+        let currentMatches = JSON.parse(sessionStorage.getItem('currentMatches')) || [];
+        let currentIndex = parseInt(sessionStorage.getItem('currentIndex')) || 0;
+        let lastQuery = sessionStorage.getItem('lastQuery') || '';
+
         function getUrlParam(name) {
             const results = new RegExp('[\?&]' + name + '=([^&#]*)').exec(window.location.href);
             return results ? results[1] : null;
         }
 
-        // Set initial iframe source based on URL parameter or default to start slide
-        const targetSlide = getUrlParam('slide') || 'id.p';
-        document.getElementById('slidesIframe').src = baseUrl + "&slide=" + targetSlide;
+        // Initialize display state on load
+        window.onload = function() {
+            const targetSlide = getUrlParam('slide') || 'id.p';
+            document.getElementById('slidesIframe').src = baseUrl + "&slide=" + targetSlide;
 
-        function searchSlides() {
+            if (lastQuery) {
+                document.getElementById('searchInput').value = lastQuery;
+                updateNavigationUI();
+            }
+        };
+
+        function startNewSearch() {
             const rawQuery = document.getElementById('searchInput').value.toLowerCase().trim();
             const query = rawQuery.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"");
             const errorDiv = document.getElementById('errorMessage');
@@ -130,27 +171,64 @@
                 return; 
             }
 
-            const match = slideData.find(item => {
+            // Find ALL slides matching this term
+            const matches = [];
+            slideData.forEach(item => {
                 const cleanKeywords = item.keywords.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"");
-                return cleanKeywords.includes(query);
+                if (cleanKeywords.includes(query)) {
+                    matches.push(item.id);
+                }
             });
 
-            if (match) {
+            if (matches.length > 0) {
                 errorDiv.style.display = "none";
                 
-                // FORCE FRESH INITIALIZATION: We append the slide query to the main browser window's URL.
-                // This reloads the GitHub Page entirely, passing a pristine new instruction to the iframe.
-                const currentUrlWithoutParams = window.location.href.split('?')[0];
-                window.location.href = currentUrlWithoutParams + "?slide=id." + match.id;
-                
+                // Save search context to session storage
+                sessionStorage.setItem('currentMatches', JSON.stringify(matches));
+                sessionStorage.setItem('currentIndex', '0');
+                sessionStorage.setItem('lastQuery', rawQuery);
+
+                // Execute redirect to first match
+                executeRedirect(matches[0]);
             } else {
                 errorDiv.textContent = `"${rawQuery}" not found in the Success Wheel.`;
                 errorDiv.style.display = "block";
+                document.getElementById('navControls').style.display = 'none';
+                sessionStorage.clear();
             }
         }
 
+        function navigateMatches(direction) {
+            if (currentMatches.length <= 1) return;
+
+            // Increment or Decrement counter with circular looping bounds
+            let newIndex = currentIndex + direction;
+            if (newIndex >= currentMatches.length) newIndex = 0;
+            if (newIndex < 0) newIndex = currentMatches.length - 1;
+
+            sessionStorage.setItem('currentIndex', newIndex.toString());
+            executeRedirect(currentMatches[newIndex]);
+        }
+
+        function updateNavigationUI() {
+            const navControls = document.getElementById('navControls');
+            const matchCountLabel = document.getElementById('matchCount');
+
+            if (currentMatches.length > 0) {
+                navControls.style.display = 'flex';
+                matchCountLabel.textContent = `${currentIndex + 1} of ${currentMatches.length}`;
+            } else {
+                navControls.style.display = 'none';
+            }
+        }
+
+        function executeRedirect(slideId) {
+            const currentUrlWithoutParams = window.location.href.split('?')[0];
+            window.location.href = currentUrlWithoutParams + "?slide=id." + slideId;
+        }
+
         document.getElementById('searchInput').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') { searchSlides(); }
+            if (e.key === 'Enter') { startNewSearch(); }
         });
     </script>
 </body>
