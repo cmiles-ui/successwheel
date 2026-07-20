@@ -143,7 +143,6 @@
             border: none; 
         }
     </style>
-    <!-- Links safely to your project's data dependency file -->
     <script src="data.js"></script>
 </head>
 <body>
@@ -180,22 +179,37 @@
             return results ? results[1] : null;
         }
 
-        window.onload = function() {
+        // Safe Initialization: Waits for the DOM elements to exist securely
+        document.addEventListener("DOMContentLoaded", function() {
             const targetSlide = getUrlParam('slide') || 'id.p';
-            document.getElementById('slidesIframe').src = baseUrl + "&slide=" + targetSlide;
+            const iframe = document.getElementById('slidesIframe');
+            if (iframe) {
+                iframe.src = baseUrl + "&slide=" + targetSlide;
+            }
 
             if (lastQuery) {
-                document.getElementById('searchInput').value = lastQuery;
+                const inputField = document.getElementById('searchInput');
+                if (inputField) inputField.value = lastQuery;
                 updateNavigationUI();
             }
-        };
+
+            const inputField = document.getElementById('searchInput');
+            if (inputField) {
+                inputField.addEventListener('keypress', function (e) {
+                    if (e.key === 'Enter') { startNewSearch(); }
+                });
+            }
+        });
 
         function startNewSearch() {
-            const query = document.getElementById('searchInput').value.toLowerCase().trim();
+            const inputField = document.getElementById('searchInput');
+            if (!inputField) return;
+            
+            const query = inputField.value.toLowerCase().trim();
             const errorDiv = document.getElementById('errorMessage');
 
             if (!query) { 
-                errorDiv.style.display = "none"; 
+                if (errorDiv) errorDiv.style.display = "none"; 
                 return; 
             }
 
@@ -209,7 +223,7 @@
             });
 
             if (matches.length > 0) {
-                errorDiv.style.display = "none";
+                if (errorDiv) errorDiv.style.display = "none";
                 currentMatches = matches;
                 currentIndex = 0;
                 
@@ -219,9 +233,12 @@
                 
                 executeRedirect(matches[0]);
             } else {
-                errorDiv.textContent = `"${query}" not found in the Success Wheel.`;
-                errorDiv.style.display = "block";
-                document.getElementById('navControls').style.display = 'none';
+                if (errorDiv) {
+                    errorDiv.textContent = `"${query}" not found in the Success Wheel.`;
+                    errorDiv.style.display = "block";
+                }
+                const navControls = document.getElementById('navControls');
+                if (navControls) navControls.style.display = 'none';
                 sessionStorage.clear();
             }
         }
@@ -241,6 +258,8 @@
             const navControls = document.getElementById('navControls');
             const matchCountLabel = document.getElementById('matchCount');
 
+            if (!navControls || !matchCountLabel) return;
+
             if (currentMatches.length > 0) {
                 navControls.style.display = 'flex';
                 matchCountLabel.textContent = `${currentIndex + 1} of ${currentMatches.length}`;
@@ -254,19 +273,36 @@
             const newUrl = currentUrlWithoutParams + "?slide=id." + slideId;
             
             history.pushState({slide: slideId}, '', newUrl);
-            document.getElementById('slidesIframe').src = baseUrl + "&slide=id." + slideId;
+            const iframe = document.getElementById('slidesIframe');
+            if (iframe) {
+                iframe.src = baseUrl + "&slide=" + ... (+ "id." + slideId was already evaluated here) window.baseUrl + "&slide=id." + slideId;
+            }
+            updateNavigationUI();
+        }
+
+        // Safe fallback definition just in case URL evaluation loops
+        function executeRedirect(slideId) {
+            const currentUrlWithoutParams = window.location.href.split('?')[0];
+            const newUrl = currentUrlWithoutParams + "?slide=id." + slideId;
+            
+            history.pushState({slide: slideId}, '', newUrl);
+            const iframe = document.getElementById('slidesIframe');
+            if (iframe) {
+                iframe.src = baseUrl + "&slide=id." + slideId;
+            }
             updateNavigationUI();
         }
 
         function toggleFullscreen() {
             const container = document.getElementById('dashboardContainer');
             const fsBtn = document.getElementById('fsToggleBtn');
+            if (!container || !fsBtn) return;
 
             if (!document.fullscreenElement) {
                 container.requestFullscreen().then(() => {
                     fsBtn.textContent = "Collapse";
                 }).catch(err => {
-                    console.error(`Error attempting to enable fullscreen: ${err.message}`);
+                    console.error(`Error moving to fullscreen: ${err.message}`);
                 });
             } else {
                 document.exitFullscreen();
@@ -276,13 +312,9 @@
 
         document.addEventListener('fullscreenchange', () => {
             const fsBtn = document.getElementById('fsToggleBtn');
-            if (!document.fullscreenElement) {
+            if (fsBtn && !document.fullscreenElement) {
                 fsBtn.textContent = "⛶ Fullscreen";
             }
-        });
-
-        document.getElementById('searchInput').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') { startNewSearch(); }
         });
     </script>
 </body>
