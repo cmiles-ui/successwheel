@@ -143,12 +143,8 @@
             border: none; 
         }
     </style>
-    <!-- Dynamic cache-buster prevents GitHub Pages from serving a stale slide database -->
-    <script>
-        const script = document.createElement('script');
-        script.src = 'data.js?v=' + new Date().getTime();
-        document.head.appendChild(script);
-    </script>
+    <!-- Use standard synchronous inclusion to guarantee initialization sequence order -->
+    <script src="data.js"></script>
 </head>
 <body>
 
@@ -184,7 +180,6 @@
             return results ? results[1] : null;
         }
 
-        // Safe Initialization: Waits for the DOM elements to exist securely
         document.addEventListener("DOMContentLoaded", function() {
             const targetSlide = getUrlParam('slide') || 'id.p';
             const iframe = document.getElementById('slidesIframe');
@@ -218,11 +213,12 @@
                 return; 
             }
 
+            // Fallback safe assignment if database file takes extra time loading over network
             const masterData = window.slideData || [];
             const matches = [];
              
             masterData.forEach(item => {
-                if (item.keywords.toLowerCase().includes(query)) {
+                if (item.keywords && item.keywords.toLowerCase().includes(query)) {
                     matches.push(item.id);
                 }
             });
@@ -275,12 +271,14 @@
 
         function executeRedirect(slideId) {
             const currentUrlWithoutParams = window.location.href.split('?')[0];
-            const newUrl = currentUrlWithoutParams + "?slide=" + slideId;
+            // Normalize ID matching footprints across target platforms
+            const cleanSlideId = slideId.startsWith('id.') ? slideId : "id." + slideId;
+            const newUrl = currentUrlWithoutParams + "?slide=" + cleanSlideId;
              
-            history.pushState({slide: slideId}, '', newUrl);
+            history.pushState({slide: cleanSlideId}, '', newUrl);
             const iframe = document.getElementById('slidesIframe');
             if (iframe) {
-                iframe.src = baseUrl + "&slide=" + slideId;
+                iframe.src = baseUrl + "&slide=" + cleanSlideId;
             }
             updateNavigationUI();
         }
