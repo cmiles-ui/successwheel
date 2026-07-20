@@ -162,7 +162,8 @@
         </div>
         <div id="errorMessage" class="error-message"></div>
 
-        <div class="iframe-wrapper">
+        <div class="iframe-wrapper" id="wrapper">
+            <!-- Target iframe will dynamically rebuild here to force Google navigation -->
             <iframe id="slidesIframe" allowfullscreen="true"></iframe>
         </div>
     </div>
@@ -174,7 +175,6 @@
         let currentIndex = 0;
         let lastQuery = '';
 
-        // Pull state safely from sessionStorage on load
         function loadSavedState() {
             currentMatches = JSON.parse(sessionStorage.getItem('currentMatches')) || [];
             currentIndex = parseInt(sessionStorage.getItem('currentIndex')) || 0;
@@ -197,7 +197,6 @@
             }
         };
 
-        // Sync local adjustments if user handles back/forward movements
         window.onpopstate = function() {
             loadSavedState();
             updateNavigationUI();
@@ -270,7 +269,17 @@
             const newUrl = currentUrlWithoutParams + "?slide=id." + slideId;
             
             history.pushState({slide: slideId}, '', newUrl);
-            document.getElementById('slidesIframe').src = baseUrl + "&slide=" + slideId;
+            
+            // FIX: Rebuild the iframe from scratch to force the player to reload the new slide parameter
+            const wrapper = document.getElementById('wrapper');
+            wrapper.innerHTML = ''; 
+            
+            const newIframe = document.createElement('iframe');
+            newIframe.id = 'slidesIframe';
+            newIframe.setAttribute('allowfullscreen', 'true');
+            newIframe.src = baseUrl + "&slide=" + slideId;
+            
+            wrapper.appendChild(newIframe);
             updateNavigationUI();
         }
 
