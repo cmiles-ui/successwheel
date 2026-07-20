@@ -64,6 +64,10 @@
             color: #3c4043;
             padding: 8px 12px;
             font-size: 13px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
         }
         .nav-btn:hover { background-color: #e8eaed; }
         .match-count {
@@ -138,7 +142,8 @@
             { id: "g2d5d56b1897_0_54", keywords: "interviewing employee success posts job advertisements candidate communications candidate screening application resume video interview schedules live interview with hiring manager hiring manager prepares for live interview by reviewing: job profile" }
         ];
 
-        const baseUrl = "https://docs.google.com/presentation/d/16m363rm8KbODBF4_73Jt824KoW6NaEQsueUZ_LTdyFU/embed?start=false&loop=false&delayms=3000";
+        // Includes &rm=minimal parameter to strip away Google's native bottom control shelf
+        const baseUrl = "https://docs.google.com/presentation/d/16m363rm8KbODBF4_73Jt824KoW6NaEQsueUZ_LTdyFU/embed?start=false&loop=false&delayms=3000&rm=minimal";
 
         let currentMatches = JSON.parse(sessionStorage.getItem('currentMatches')) || [];
         let currentIndex = parseInt(sessionStorage.getItem('currentIndex')) || 0;
