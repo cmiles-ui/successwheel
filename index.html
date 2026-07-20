@@ -22,13 +22,34 @@
             padding: 15px;
             border-radius: 12px;
             box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
         }
+        /* Fullscreen API styling overrides */
+        .container:fullscreen {
+            max-width: 100vw;
+            width: 100vw;
+            height: 100vh;
+            background: #000000;
+            padding: 20px;
+            border-radius: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        /* Tightened, ultra-compact control bar */
         .search-box { 
             margin: 0 auto 12px auto; 
-            max-width: 500px; 
+            max-width: 550px; 
             display: flex; 
             gap: 6px; 
             align-items: center;
+            width: 100%;
+        }
+        .container:fullscreen .search-box {
+            max-width: 700px; /* Gives a bit more breathing room in fullscreen mode */
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 8px;
         }
         input[type="text"] { 
             flex: 1; 
@@ -49,9 +70,16 @@
             border-radius: 6px; 
             cursor: pointer; 
             font-weight: 600; 
+            white-space: nowrap;
         }
         button:hover { background-color: #1557b0; }
         
+        .fullscreen-btn {
+            background-color: #3c4043;
+        }
+        .fullscreen-btn:hover { background-color: #202124; }
+        
+        /* Compact Navigation Controls */
         .nav-controls {
             display: none; 
             gap: 4px;
@@ -68,12 +96,22 @@
             font-weight: 600;
         }
         .nav-btn:hover { background-color: #e8eaed; }
+        
+        .container:fullscreen .nav-btn {
+            background-color: #3c4043;
+            color: #fff;
+        }
+        .container:fullscreen .nav-btn:hover { background-color: #4f5357; }
+
         .match-count {
             font-size: 13px;
             color: #5f6368;
             min-width: 70px;
             text-align: center;
             font-weight: 500;
+        }
+        .container:fullscreen .match-count {
+            color: #e8eaed;
         }
 
         .error-message { 
@@ -88,11 +126,16 @@
         .iframe-wrapper { 
             position: relative; 
             width: 100%; 
-            padding-top: 56.25%; 
+            padding-top: 56.25%; /* 16:9 Aspect Ratio */
             height: 0; 
             border-radius: 8px; 
             overflow: hidden; 
             background: #000; 
+        }
+        .container:fullscreen .iframe-wrapper {
+            flex: 1;
+            padding-top: 0;
+            height: auto;
         }
         iframe { 
             position: absolute; 
@@ -106,7 +149,7 @@
 </head>
 <body>
 
-    <div class="container">
+    <div class="container" id="dashboardContainer">
         <div class="search-box">
             <input type="text" id="searchInput" placeholder="Search the Success Wheel...">
             <button onclick="startNewSearch()">Search</button>
@@ -116,6 +159,8 @@
                 <span class="match-count" id="matchCount">0 of 0</span>
                 <button class="nav-btn" onclick="navigateMatches(1)">▶</button>
             </div>
+            
+            <button class="fullscreen-btn" id="fsToggleBtn" onclick="toggleFullscreen()">⛶ Fullscreen</button>
         </div>
         <div id="errorMessage" class="error-message"></div>
 
@@ -191,7 +236,7 @@
            { id: "g1ff6ed86e45_0_31", keywords: "each of us is key to our fiscal success our commitment to zero revenue loss and zero expense without roi is what makes our company financially stable and successful. this commitment directly supports the stability and ongoing growth of everyone's careers and compensation. we assign a person responsible for each gl account to ensure adherence to this philosophy" },
            { id: "g3712e94ea8e_0_0", keywords: "gl account responsibility the person responsible for each gl account executes the following at least monthly to help ensure adherence to this philosophy: step 1: utilize appropriate striven reports to identify possible issues. examples: p & l p & l comparison p & l customer comparison balance sheet stock status sales order status etc. step 2: call for an audit of possible issues. step 3: use audit findings to rectify issues. step 4: implement changes to procedures to avoid similar issues in the future." },
            { id: "g2ecbd33531b_0_0", keywords: "why and how to say goodbye to a customer. if all four point are true and nothing has gotten better, we must schedule to transition the customer to a new provider: an individual is consistently difficult instead of situationally difficult. there is absolutely no joy in working with this person. never happy and nothing will make them happy. this individual is our primary contact or someone we deal with on a weekly basis. this person will most likely remain our primary contact (or in contact on a weekly basis). we have tried to change this by explaining to the primary contact. we have confronted it and asked for the change." },
-           { id: "g21d0a97e01c_0_340", keywords: "previous years we direct ai we turn ai disruption into human opportunity. as leaders and individuals, we pledge to evolve rapidly, securing our jobs, elevating our compensation, and accelerating our growth. ai usage guidelines" },
+           { id: "g21d0a97e01c_0_340", keywords: "previous years we turn ai disruption into human opportunity. as leaders and individuals, we pledge to evolve rapidly, securing our jobs, elevating our compensation, and accelerating our growth. ai usage guidelines" },
            { id: "g1ee5bf23a57_0_0", keywords: "yearly themes 2026 - we direct ai 2025 - build bright futures 2024 - change it 2023 - always moving forward 2022 - believe in each other 2021 - culture without walls 2020 - seizing opportunity 2019 - eliminate mediocrity 2018 - you request. we respond. it gets done!® 2017 - good to great - in all that we do - we don’t settle for good. we choose to be great. 2016 - tearing down the walls to drive more value to our customers 2015 - increasing the value of each role in the organization 2014 - build your life with miles 2013 - build your life with miles" }
         ];
 
@@ -275,6 +320,31 @@
             const currentUrlWithoutParams = window.location.href.split('?')[0];
             window.location.href = currentUrlWithoutParams + "?slide=id." + slideId;
         }
+
+        // Native HTML5 Fullscreen layout toggle handler
+        function toggleFullscreen() {
+            const container = document.getElementById('dashboardContainer');
+            const fsBtn = document.getElementById('fsToggleBtn');
+
+            if (!document.fullscreenElement) {
+                container.requestFullscreen().then(() => {
+                    fsBtn.textContent = "Collapse";
+                }).catch(err => {
+                    console.error(`Error attempting to enable fullscreen: ${err.message}`);
+                });
+            } else {
+                document.exitFullscreen();
+                fsBtn.textContent = "⛶ Fullscreen";
+            }
+        }
+
+        // Keep button UI text synced when users press 'Esc' key to leave fullscreen mode
+        document.addEventListener('fullscreenchange', () => {
+            const fsBtn = document.getElementById('fsToggleBtn');
+            if (!document.fullscreenElement) {
+                fsBtn.textContent = "⛶ Fullscreen";
+            }
+        });
 
         document.getElementById('searchInput').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') { startNewSearch(); }
