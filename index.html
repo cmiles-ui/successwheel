@@ -37,14 +37,14 @@
         }
         .search-box { 
             margin: 0 auto 12px auto; 
-            max-width: 650px; 
+            max-width: 550px; 
             display: flex; 
             gap: 6px; 
             align-items: center;
             width: 100%;
         }
         .container:fullscreen .search-box {
-            max-width: 750px;
+            max-width: 700px;
             background: rgba(255, 255, 255, 0.1);
             padding: 10px;
             border-radius: 8px;
@@ -72,44 +72,44 @@
         }
         button:hover { background-color: #1557b0; }
         
-        .fullscreen-btn { background-color: #3c4043; }
+        .fullscreen-btn {
+            background-color: #3c4043;
+        }
         .fullscreen-btn:hover { background-color: #202124; }
         
         .nav-controls {
             display: none; 
-            gap: 6px;
+            gap: 4px;
             align-items: center;
-            background: #f1f3f4;
-            padding: 2px 6px;
-            border-radius: 6px;
-        }
-        .container:fullscreen .nav-controls {
-            background: rgba(255, 255, 255, 0.15);
         }
         .nav-btn {
-            background: transparent;
+            background-color: #f1f3f4;
             color: #3c4043;
+            padding: 8px 12px;
+            font-size: 13px;
             border: none;
-            padding: 6px 10px;
-            font-size: 14px;
+            border-radius: 6px;
             cursor: pointer;
-            font-weight: bold;
+            font-weight: 600;
         }
-        .nav-btn:hover { background-color: rgba(0,0,0,0.05); border-radius: 4px; }
+        .nav-btn:hover { background-color: #e8eaed; }
         
         .container:fullscreen .nav-btn {
+            background-color: #3c4043;
             color: #fff;
         }
-        .container:fullscreen .nav-btn:hover { background-color: rgba(255,255,255,0.1); }
+        .container:fullscreen .nav-btn:hover { background-color: #4f5357; }
 
         .match-count {
             font-size: 13px;
             color: #5f6368;
-            min-width: 65px;
+            min-width: 70px;
             text-align: center;
-            font-weight: 600;
+            font-weight: 500;
         }
-        .container:fullscreen .match-count { color: #e8eaed; }
+        .container:fullscreen .match-count {
+            color: #e8eaed;
+        }
 
         .error-message { 
             color: #d93025; 
@@ -143,6 +143,8 @@
             border: none; 
         }
     </style>
+    
+    <!-- Externalizing the full OCR index data cleanly -->
     <script src="data.js"></script>
 </head>
 <body>
@@ -162,8 +164,7 @@
         </div>
         <div id="errorMessage" class="error-message"></div>
 
-        <div class="iframe-wrapper" id="wrapper">
-            <!-- Target iframe will dynamically rebuild here to force Google navigation -->
+        <div class="iframe-wrapper">
             <iframe id="slidesIframe" allowfullscreen="true"></iframe>
         </div>
     </div>
@@ -171,15 +172,10 @@
     <script>
         const baseUrl = "https://docs.google.com/presentation/d/16m363rm8KbODBF4_73Jt824KoW6NaEQsueUZ_LTdyFU/embed?start=false&loop=false&delayms=3000&rm=minimal";
 
-        let currentMatches = [];
-        let currentIndex = 0;
-        let lastQuery = '';
-
-        function loadSavedState() {
-            currentMatches = JSON.parse(sessionStorage.getItem('currentMatches')) || [];
-            currentIndex = parseInt(sessionStorage.getItem('currentIndex')) || 0;
-            lastQuery = sessionStorage.getItem('lastQuery') || '';
-        }
+        // Pull states reliably from standard cache
+        let currentMatches = JSON.parse(sessionStorage.getItem('currentMatches')) || [];
+        let currentIndex = parseInt(sessionStorage.getItem('currentIndex')) || 0;
+        let lastQuery = sessionStorage.getItem('lastQuery') || '';
 
         function getUrlParam(name) {
             const results = new RegExp('[\?&]' + name + '=([^&#]*)').exec(window.location.href);
@@ -187,7 +183,6 @@
         }
 
         window.onload = function() {
-            loadSavedState();
             const targetSlide = getUrlParam('slide') || 'id.p';
             document.getElementById('slidesIframe').src = baseUrl + "&slide=" + targetSlide;
 
@@ -195,11 +190,6 @@
                 document.getElementById('searchInput').value = lastQuery;
                 updateNavigationUI();
             }
-        };
-
-        window.onpopstate = function() {
-            loadSavedState();
-            updateNavigationUI();
         };
 
         function startNewSearch() {
@@ -212,30 +202,31 @@
                 return; 
             }
 
-            const completeIndex = window.slideData || [];
-            currentMatches = [];
+            // Looks directly at the global array initialized by your data.js file
+            const targetData = window.slideData || [];
+            const matches = [];
             
-            completeIndex.forEach(item => {
+            targetData.forEach(item => {
                 const cleanKeywords = item.keywords.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"");
                 if (cleanKeywords.includes(query)) {
-                    currentMatches.push(item.id);
+                    matches.push(item.id);
                 }
             });
 
-            if (currentMatches.length > 0) {
+            if (matches.length > 0) {
                 errorDiv.style.display = "none";
+                currentMatches = matches;
                 currentIndex = 0;
                 
-                sessionStorage.setItem('currentMatches', JSON.stringify(currentMatches));
+                sessionStorage.setItem('currentMatches', JSON.stringify(matches));
                 sessionStorage.setItem('currentIndex', '0');
                 sessionStorage.setItem('lastQuery', rawQuery);
                 
-                executeRedirect(currentMatches[0]);
+                executeRedirect(matches[0]);
             } else {
                 errorDiv.textContent = `"${rawQuery}" not found in the Success Wheel.`;
                 errorDiv.style.display = "block";
                 document.getElementById('navControls').style.display = 'none';
-                currentMatches = [];
                 sessionStorage.clear();
             }
         }
@@ -244,7 +235,6 @@
             if (currentMatches.length <= 1) return;
 
             currentIndex = currentIndex + direction;
-            
             if (currentIndex >= currentMatches.length) currentIndex = 0;
             if (currentIndex < 0) currentIndex = currentMatches.length - 1;
 
@@ -269,17 +259,7 @@
             const newUrl = currentUrlWithoutParams + "?slide=id." + slideId;
             
             history.pushState({slide: slideId}, '', newUrl);
-            
-            // FIX: Rebuild the iframe from scratch to force the player to reload the new slide parameter
-            const wrapper = document.getElementById('wrapper');
-            wrapper.innerHTML = ''; 
-            
-            const newIframe = document.createElement('iframe');
-            newIframe.id = 'slidesIframe';
-            newIframe.setAttribute('allowfullscreen', 'true');
-            newIframe.src = baseUrl + "&slide=" + slideId;
-            
-            wrapper.appendChild(newIframe);
+            document.getElementById('slidesIframe').src = baseUrl + "&slide=id." + slideId;
             updateNavigationUI();
         }
 
