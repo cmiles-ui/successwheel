@@ -62,7 +62,7 @@
         .iframe-wrapper { 
             position: relative; 
             width: 100%; 
-            padding-top: 56.25%; /* Perfect 16:9 Aspect Ratio */
+            padding-top: 56.25%; 
             height: 0; 
             border-radius: 8px; 
             overflow: hidden; 
@@ -87,14 +87,12 @@
         </div>
         <div id="errorMessage" class="error-message"></div>
 
-        <div class="iframe-wrapper" id="iframeContainer">
-            <!-- Dynamically targets the embed version -->
-            <iframe id="slidesIframe" src="https://docs.google.com/presentation/d/16m363rm8KbODBF4_73Jt824KoW6NaEQsueUZ_LTdyFU/embed?start=false&loop=false&delayms=3000&slide=id.p" allowfullscreen="true"></iframe>
+        <div class="iframe-wrapper">
+            <iframe id="slidesIframe" allowfullscreen="true"></iframe>
         </div>
     </div>
 
     <script>
-        // Full text keywords array mapped directly to exact stable slide IDs
         const slideData = [
             { id: "p", keywords: "ai generated podcast not perfect but crazy good :-) feel free to click around the success wheel while listening." },
             { id: "g24d53d2f79f_0_0", keywords: "it all starts with you. miles it works from the inside out, focusing on each individual’s well-being and career advancement. your involvement, contribution, and influence on the inner and outer circles of the success wheel enable you to make a significant and meaningful impact, and it’s how our company collectively succeeds." },
@@ -110,13 +108,22 @@
             { id: "g2d5d56b1897_0_54", keywords: "interviewing employee success posts job advertisements candidate communications candidate screening application resume video interview schedules live interview with hiring manager hiring manager prepares for live interview by reviewing: job profile" }
         ];
 
+        const baseUrl = "https://docs.google.com/presentation/d/16m363rm8KbODBF4_73Jt824KoW6NaEQsueUZ_LTdyFU/embed?start=false&loop=false&delayms=3000";
+
+        // Read the target slide ID directly from the browser's address URL on initial load
+        function getUrlParam(name) {
+            const results = new RegExp('[\?&]' + name + '=([^&#]*)').exec(window.location.href);
+            return results ? results[1] : null;
+        }
+
+        // Set initial iframe source based on URL parameter or default to start slide
+        const targetSlide = getUrlParam('slide') || 'id.p';
+        document.getElementById('slidesIframe').src = baseUrl + "&slide=" + targetSlide;
+
         function searchSlides() {
             const rawQuery = document.getElementById('searchInput').value.toLowerCase().trim();
-            // Clean out messy sentence punctuation to ensure partial strings match perfectly
             const query = rawQuery.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"");
-            const container = document.getElementById('iframeContainer');
             const errorDiv = document.getElementById('errorMessage');
-            const baseUrl = "https://docs.google.com/presentation/d/16m363rm8KbODBF4_73Jt824KoW6NaEQsueUZ_LTdyFU/embed?start=false&loop=false&delayms=3000";
 
             if (!query) { 
                 errorDiv.style.display = "none"; 
@@ -131,13 +138,10 @@
             if (match) {
                 errorDiv.style.display = "none";
                 
-                // On GitHub Pages, rebuilding the iframe element directly forces the 
-                // presentation viewer to jump straight to the matched slide ID!
-                container.innerHTML = ''; 
-                const newIframe = document.createElement('iframe');
-                newIframe.src = baseUrl + "&slide=" + match.id;
-                newIframe.setAttribute('allowfullscreen', 'true');
-                container.appendChild(newIframe);
+                // FORCE FRESH INITIALIZATION: We append the slide query to the main browser window's URL.
+                // This reloads the GitHub Page entirely, passing a pristine new instruction to the iframe.
+                const currentUrlWithoutParams = window.location.href.split('?')[0];
+                window.location.href = currentUrlWithoutParams + "?slide=id." + match.id;
                 
             } else {
                 errorDiv.textContent = `"${rawQuery}" not found in the Success Wheel.`;
@@ -145,7 +149,6 @@
             }
         }
 
-        // Allow searching by pressing Enter key
         document.getElementById('searchInput').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') { searchSlides(); }
         });
