@@ -143,7 +143,6 @@
             border: none; 
         }
     </style>
-    <!-- Use standard synchronous inclusion to guarantee initialization sequence order -->
     <script src="data.js"></script>
 </head>
 <body>
@@ -181,7 +180,11 @@
         }
 
         document.addEventListener("DOMContentLoaded", function() {
-            const targetSlide = getUrlParam('slide') || 'id.p';
+            const rawSlideParam = getUrlParam('slide') || 'id.p';
+            // Ensure initial load also uses the normalized prefix footprint
+            let cleanSlideId = rawSlideParam.replace(/^id\./gi, '');
+            const targetSlide = "id." + cleanSlideId;
+
             const iframe = document.getElementById('slidesIframe');
             if (iframe) {
                 iframe.src = baseUrl + "&slide=" + targetSlide;
@@ -213,7 +216,6 @@
                 return; 
             }
 
-            // Fallback safe assignment if database file takes extra time loading over network
             const masterData = window.slideData || [];
             const matches = [];
              
@@ -271,14 +273,18 @@
 
         function executeRedirect(slideId) {
             const currentUrlWithoutParams = window.location.href.split('?')[0];
-            // Normalize ID matching footprints across target platforms
-            const cleanSlideId = slideId.startsWith('id.') ? slideId : "id." + slideId;
-            const newUrl = currentUrlWithoutParams + "?slide=" + cleanSlideId;
+            
+            // Clean out any accidental or double-injected 'id.' string patterns
+            let cleanId = slideId.replace(/^id\./gi, '');
+            
+            // Re-apply exactly one 'id.' sequence safely for the presentation handler
+            const targetSlide = "id." + cleanId;
+            const newUrl = currentUrlWithoutParams + "?slide=" + targetSlide;
              
-            history.pushState({slide: cleanSlideId}, '', newUrl);
+            history.pushState({slide: targetSlide}, '', newUrl);
             const iframe = document.getElementById('slidesIframe');
             if (iframe) {
-                iframe.src = baseUrl + "&slide=" + cleanSlideId;
+                iframe.src = baseUrl + "&slide=" + targetSlide;
             }
             updateNavigationUI();
         }
