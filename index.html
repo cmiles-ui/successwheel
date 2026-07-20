@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Success Wheel Search Dashboard</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            background-color: #f8f9fa; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 1100px;
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+        }
+        .search-box { 
+            margin: 0 auto 24px auto; 
+            max-width: 600px; 
+            display: flex; 
+            gap: 10px; 
+        }
+        input[type="text"] { 
+            flex: 1; 
+            padding: 14px 20px; 
+            font-size: 16px; 
+            border: 2px solid #e0e0e0; 
+            border-radius: 8px; 
+            outline: none; 
+            transition: border-color 0.2s;
+        }
+        input[type="text"]:focus { border-color: #1a73e8; }
+        button { 
+            padding: 14px 28px; 
+            font-size: 16px; 
+            background-color: #1a73e8; 
+            color: white; 
+            border: none; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-weight: 600; 
+        }
+        button:hover { background-color: #1557b0; }
+        .error-message { 
+            color: #d93025; 
+            font-size: 15px; 
+            margin-top: -16px; 
+            margin-bottom: 16px; 
+            display: none; 
+            text-align: center; 
+            font-weight: 500;
+        }
+        .iframe-wrapper { 
+            position: relative; 
+            width: 100%; 
+            padding-top: 56.25%; /* Perfect 16:9 Aspect Ratio */
+            height: 0; 
+            border-radius: 8px; 
+            overflow: hidden; 
+            background: #000; 
+        }
+        iframe { 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            border: none; 
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="Search the Success Wheel (e.g., starts, habits, budget)...">
+            <button onclick="searchSlides()">Search</button>
+        </div>
+        <div id="errorMessage" class="error-message"></div>
+
+        <div class="iframe-wrapper" id="iframeContainer">
+            <!-- Dynamically targets the embed version -->
+            <iframe id="slidesIframe" src="https://docs.google.com/presentation/d/16m363rm8KbODBF4_73Jt824KoW6NaEQsueUZ_LTdyFU/embed?start=false&loop=false&delayms=3000&slide=id.p" allowfullscreen="true"></iframe>
+        </div>
+    </div>
+
+    <script>
+        // Full text keywords array mapped directly to exact stable slide IDs
+        const slideData = [
+            { id: "p", keywords: "ai generated podcast not perfect but crazy good :-) feel free to click around the success wheel while listening." },
+            { id: "g24d53d2f79f_0_0", keywords: "it all starts with you. miles it works from the inside out, focusing on each individual’s well-being and career advancement. your involvement, contribution, and influence on the inner and outer circles of the success wheel enable you to make a significant and meaningful impact, and it’s how our company collectively succeeds." },
+            { id: "g21cf003bda6_0_346", keywords: "work you can be great at being great at your work means you: love the work you do. it exhilarates you! master managing and prioritizing your time and focus set yourself up to accomplish more every day set up an optimal work environment become a power user of the software used most to do your job achieve the desired outcomes and exceed the measurables for your role embrace challenges and are an advocate for positive change grow your skills and knowledge through achieving career strides. work toward rising to expert proficiency level in your role drive yourself and encourage other to pursue greatness you make the lives of the people you touch brighter every day" },
+            { id: "g35c48e9ac50_0_0", keywords: "accomplish more every day! tips for being highly productive centralize & prioritize tasks: maintain a single, prioritized task list from all sources. (references: tedx talk, getting things done) plan ahead: preview and prepare for upcoming days/weeks each day. (reference: ultra learning) proactively manage obstacles: anticipate and plan for challenges. adapt & optimize: be ready to change your approach and identify/eliminate wasted effort. (references: lean concepts, minimize waste, phoenix project) minimize multitasking: focus attention, avoid distractions, and complete tasks before switching. (references: psychology today blog, deep work) reflect & adjust: review progress, identify improvements, and prepare for the next task. strategic task selection: choose tasks based on priority, type, and time. effective communication & collaboration: engage with team members and strive for efficiency. build productive habits: establish routines, prioritize self-care (sleep, nutrition, breaks). (references: atomic habits, sleep foundation, eatthis, stretchminder)" },
+            { id: "g3445f698524_0_0", keywords: "role practice = consistent wins amateurs play softball on sundays with no practice. we are not amateurs. we are professionals! we practice with each other so we are ready when it comes to “game time”. we role practice means we: commit to scheduled weekly practice select real-world scenarios rotate roles so all attendees gain hands-on experience as a client, customer, and observer in every session. share specific feedback to help us each improve. when we practice with purpose, we fuel success—for our teammates, our customers, and ourselves. link to role practice template" },
+            { id: "g33816ace857_0_0", keywords: "work environment having an optimal work environment means you: have a dedicated and quiet workspace where you can focus. have set up your workspace to be as productive as possible. have a reliable, high-speed internet connection and power supply. report and work to rectify quickly any issues with your setup. dress appropriately for video meetings. are responsive on google chat, meet, striven discussions, email, and your business phone (if applicable). always turn on your video for all video meetings." },
+            { id: "g293d97eb568_0_0", keywords: "proficiency levels level of ability to perform job responsibilities and achieve the desired outcomes of your role. level 0: in-training primarily focused on learning the skills necessary to perform your role limited independent responsibility training on the processes and software tools for your role level 1: proficient capable of accomplishing your role responsibilities typically paired with more experienced coworkers for more complex tasks know and utilize the processes and software tools for your role level 2: advanced consistently accomplishing all responsibilities and desired outcomes of your role working independently on challenging tasks and projects may help train coworkers well-developed skills and expertise advanced in utilizing processes and software tools for your role level 3: expert easily handles the most complex tasks and projects independently escalation point for coworkers to help solve complex tasks and projects create and refine processes select, implement, and improve our use of software tools maintains expert level through continually advancing skills while acting to change." },
+            { id: "g21cf003bda6_0_320", keywords: "winning process we have continually created and revised our processes with the goal of winning for ourselves and our customers. every person in our company has the ability to make a significant impact through following our processes and recommending smart updates. a winning process: only as long as it needs to be easy to follow necessary to ensure great results empowers you to make smart process adjustments evolves over time to ensure it continues to be a winning process" },
+            { id: "g24f24f06a66_0_29", keywords: "measurables well-rounded measurables focus on: throughput timeliness quality of work results great measurables: easy to understand and track sets the bar and highlights great performance identify opportunities for improvement help make well informed decisions" },
+            { id: "g23e0e62601c_0_0", keywords: "your manager’s mission build a winning team with all members thriving on their career journey. a great manager promises to… be in your corner and root for your success recognize & encourage what’s going well (very often) ensure you have the tools and resources to succeed lead by example delegate to create greater opportunities for team members step in and directly help hold all team members accountable for: exceeding measurables following winning process setting & achieving quarterly career strides full participation in impact meetings, 1-on-1’s (manager report) helping to make the lives brighter of the people they work with promptly initiate performance improvement plans for underperforming members communicate significant accomplishments & life events add certifications & promotions to this spreadsheet to include in the employee success team’s achievements buzz post recognize significant life events by entering a “get help from employee success” task type and fill out the life event section complete compensation reviews on-time annually (manager report) be responsive, approachable and open-minded interested in becoming a manager? click here good books for managers click here, great books to read for managers first break all the rules the new one minute manager the making of a manager, five dysfunctions of a team high output management" },
+            { id: "g2d5d56b1897_0_1", keywords: "building a winning team we are looking for extraordinary people who align with our beliefs will make our days brighter will be happy working here will succeed in the position prioritize helping others are team focused have a growth mindset and are lifelong learners have significant potential we are not looking for people who just have the ability to do the job yet don’t align with our beliefs may be difficult to work with will not be happy working here will not succeed in the position are only self-focused have a destructive ego have a fixed mindset interviewing hiring onboarding offboarding, great books to read for managers first break all the rules the new one minute manager the making of a manager, five dysfunctions of a team high output management" },
+            { id: "g2d5d56b1897_0_54", keywords: "interviewing employee success posts job advertisements candidate communications candidate screening application resume video interview schedules live interview with hiring manager hiring manager prepares for live interview by reviewing: job profile" }
+        ];
+
+        function searchSlides() {
+            const rawQuery = document.getElementById('searchInput').value.toLowerCase().trim();
+            // Clean out messy sentence punctuation to ensure partial strings match perfectly
+            const query = rawQuery.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"");
+            const container = document.getElementById('iframeContainer');
+            const errorDiv = document.getElementById('errorMessage');
+            const baseUrl = "https://docs.google.com/presentation/d/16m363rm8KbODBF4_73Jt824KoW6NaEQsueUZ_LTdyFU/embed?start=false&loop=false&delayms=3000";
+
+            if (!query) { 
+                errorDiv.style.display = "none"; 
+                return; 
+            }
+
+            const match = slideData.find(item => {
+                const cleanKeywords = item.keywords.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"");
+                return cleanKeywords.includes(query);
+            });
+
+            if (match) {
+                errorDiv.style.display = "none";
+                
+                // On GitHub Pages, rebuilding the iframe element directly forces the 
+                // presentation viewer to jump straight to the matched slide ID!
+                container.innerHTML = ''; 
+                const newIframe = document.createElement('iframe');
+                newIframe.src = baseUrl + "&slide=" + match.id;
+                newIframe.setAttribute('allowfullscreen', 'true');
+                container.appendChild(newIframe);
+                
+            } else {
+                errorDiv.textContent = `"${rawQuery}" not found in the Success Wheel.`;
+                errorDiv.style.display = "block";
+            }
+        }
+
+        // Allow searching by pressing Enter key
+        document.getElementById('searchInput').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') { searchSlides(); }
+        });
+    </script>
+</body>
+</html>
