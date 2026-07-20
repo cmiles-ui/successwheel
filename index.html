@@ -71,12 +71,12 @@
             white-space: nowrap;
         }
         button:hover { background-color: #1557b0; }
-        
+         
         .fullscreen-btn {
             background-color: #3c4043;
         }
         .fullscreen-btn:hover { background-color: #202124; }
-        
+         
         .nav-controls {
             display: none; 
             gap: 4px;
@@ -93,7 +93,7 @@
             font-weight: 600;
         }
         .nav-btn:hover { background-color: #e8eaed; }
-        
+         
         .container:fullscreen .nav-btn {
             background-color: #3c4043;
             color: #fff;
@@ -143,7 +143,12 @@
             border: none; 
         }
     </style>
-    <script src="data.js"></script>
+    <!-- Dynamic cache-buster prevents GitHub Pages from serving a stale slide database -->
+    <script>
+        const script = document.createElement('script');
+        script.src = 'data.js?v=' + new Date().getTime();
+        document.head.appendChild(script);
+    </script>
 </head>
 <body>
 
@@ -151,13 +156,13 @@
         <div class="search-box">
             <input type="text" id="searchInput" placeholder="Search the Success Wheel...">
             <button onclick="startNewSearch()">Search</button>
-            
+             
             <div class="nav-controls" id="navControls">
                 <button class="nav-btn" onclick="navigateMatches(-1)">◀</button>
                 <span class="match-count" id="matchCount">0 of 0</span>
                 <button class="nav-btn" onclick="navigateMatches(1)">▶</button>
             </div>
-            
+             
             <button class="fullscreen-btn" id="fsToggleBtn" onclick="toggleFullscreen()">⛶ Fullscreen</button>
         </div>
         <div id="errorMessage" class="error-message"></div>
@@ -204,7 +209,7 @@
         function startNewSearch() {
             const inputField = document.getElementById('searchInput');
             if (!inputField) return;
-            
+             
             const query = inputField.value.toLowerCase().trim();
             const errorDiv = document.getElementById('errorMessage');
 
@@ -215,7 +220,7 @@
 
             const masterData = window.slideData || [];
             const matches = [];
-            
+             
             masterData.forEach(item => {
                 if (item.keywords.toLowerCase().includes(query)) {
                     matches.push(item.id);
@@ -226,11 +231,11 @@
                 if (errorDiv) errorDiv.style.display = "none";
                 currentMatches = matches;
                 currentIndex = 0;
-                
+                 
                 sessionStorage.setItem('currentMatches', JSON.stringify(matches));
                 sessionStorage.setItem('currentIndex', '0');
                 sessionStorage.setItem('lastQuery', query);
-                
+                 
                 executeRedirect(matches[0]);
             } else {
                 if (errorDiv) {
@@ -270,25 +275,12 @@
 
         function executeRedirect(slideId) {
             const currentUrlWithoutParams = window.location.href.split('?')[0];
-            const newUrl = currentUrlWithoutParams + "?slide=id." + slideId;
-            
+            const newUrl = currentUrlWithoutParams + "?slide=" + slideId;
+             
             history.pushState({slide: slideId}, '', newUrl);
             const iframe = document.getElementById('slidesIframe');
             if (iframe) {
-                iframe.src = baseUrl + "&slide=" + ... (+ "id." + slideId was already evaluated here) window.baseUrl + "&slide=id." + slideId;
-            }
-            updateNavigationUI();
-        }
-
-        // Safe fallback definition just in case URL evaluation loops
-        function executeRedirect(slideId) {
-            const currentUrlWithoutParams = window.location.href.split('?')[0];
-            const newUrl = currentUrlWithoutParams + "?slide=id." + slideId;
-            
-            history.pushState({slide: slideId}, '', newUrl);
-            const iframe = document.getElementById('slidesIframe');
-            if (iframe) {
-                iframe.src = baseUrl + "&slide=id." + slideId;
+                iframe.src = baseUrl + "&slide=" + slideId;
             }
             updateNavigationUI();
         }
