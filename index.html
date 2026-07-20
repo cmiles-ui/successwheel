@@ -143,8 +143,7 @@
             border: none; 
         }
     </style>
-    
-    <!-- Externalizing the full OCR index data cleanly -->
+    <!-- Read index directly from external data file -->
     <script src="data.js"></script>
 </head>
 <body>
@@ -172,7 +171,6 @@
     <script>
         const baseUrl = "https://docs.google.com/presentation/d/16m363rm8KbODBF4_73Jt824KoW6NaEQsueUZ_LTdyFU/embed?start=false&loop=false&delayms=3000&rm=minimal";
 
-        // Pull states reliably from standard cache
         let currentMatches = JSON.parse(sessionStorage.getItem('currentMatches')) || [];
         let currentIndex = parseInt(sessionStorage.getItem('currentIndex')) || 0;
         let lastQuery = sessionStorage.getItem('lastQuery') || '';
@@ -193,8 +191,7 @@
         };
 
         function startNewSearch() {
-            const rawQuery = document.getElementById('searchInput').value.toLowerCase().trim();
-            const query = rawQuery.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"");
+            const query = document.getElementById('searchInput').value.toLowerCase().trim();
             const errorDiv = document.getElementById('errorMessage');
 
             if (!query) { 
@@ -202,13 +199,11 @@
                 return; 
             }
 
-            // Looks directly at the global array initialized by your data.js file
-            const targetData = window.slideData || [];
+            const masterData = window.slideData || [];
             const matches = [];
             
-            targetData.forEach(item => {
-                const cleanKeywords = item.keywords.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"");
-                if (cleanKeywords.includes(query)) {
+            masterData.forEach(item => {
+                if (item.keywords.toLowerCase().includes(query)) {
                     matches.push(item.id);
                 }
             });
@@ -220,11 +215,11 @@
                 
                 sessionStorage.setItem('currentMatches', JSON.stringify(matches));
                 sessionStorage.setItem('currentIndex', '0');
-                sessionStorage.setItem('lastQuery', rawQuery);
+                sessionStorage.setItem('lastQuery', query);
                 
                 executeRedirect(matches[0]);
             } else {
-                errorDiv.textContent = `"${rawQuery}" not found in the Success Wheel.`;
+                errorDiv.textContent = `"${query}" not found in the Success Wheel.`;
                 errorDiv.style.display = "block";
                 document.getElementById('navControls').style.display = 'none';
                 sessionStorage.clear();
@@ -259,7 +254,7 @@
             const newUrl = currentUrlWithoutParams + "?slide=id." + slideId;
             
             history.pushState({slide: slideId}, '', newUrl);
-            document.getElementById('slidesIframe').src = baseUrl + "&slide=id." + slideId;
+            document.getElementById('slidesIframe').src = baseUrl + "&slide=" + slideId;
             updateNavigationUI();
         }
 
