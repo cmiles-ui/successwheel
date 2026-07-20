@@ -9,7 +9,7 @@
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; 
             margin: 0; 
-            padding: 20px; 
+            padding: 10px 20px; 
             background-color: #f8f9fa; 
             display: flex;
             flex-direction: column;
@@ -19,65 +19,66 @@
             width: 100%;
             max-width: 1100px;
             background: white;
-            padding: 24px;
+            padding: 15px;
             border-radius: 12px;
             box-shadow: 0 4px 16px rgba(0,0,0,0.05);
         }
+        /* Tightened, ultra-compact control bar */
         .search-box { 
-            margin: 0 auto 24px auto; 
-            max-width: 650px; 
+            margin: 0 auto 12px auto; 
+            max-width: 500px; 
             display: flex; 
-            gap: 10px; 
+            gap: 6px; 
             align-items: center;
         }
         input[type="text"] { 
             flex: 1; 
-            padding: 14px 20px; 
-            font-size: 16px; 
-            border: 2px solid #e0e0e0; 
-            border-radius: 8px; 
+            padding: 8px 12px; 
+            font-size: 14px; 
+            border: 1.5px solid #e0e0e0; 
+            border-radius: 6px; 
             outline: none; 
             transition: border-color 0.2s;
         }
         input[type="text"]:focus { border-color: #1a73e8; }
         button { 
-            padding: 14px 24px; 
-            font-size: 16px; 
+            padding: 8px 16px; 
+            font-size: 14px; 
             background-color: #1a73e8; 
             color: white; 
             border: none; 
-            border-radius: 8px; 
+            border-radius: 6px; 
             cursor: pointer; 
             font-weight: 600; 
         }
         button:hover { background-color: #1557b0; }
         
-        /* Navigation Controls styles */
+        /* Compact Navigation Controls */
         .nav-controls {
-            display: none; /* Hidden until multiple matches are found */
-            gap: 5px;
+            display: none; 
+            gap: 4px;
             align-items: center;
         }
         .nav-btn {
             background-color: #f1f3f4;
             color: #3c4043;
-            padding: 14px 18px;
-            font-size: 16px;
+            padding: 8px 12px;
+            font-size: 13px;
         }
         .nav-btn:hover { background-color: #e8eaed; }
         .match-count {
-            font-size: 14px;
+            font-size: 13px;
             color: #5f6368;
-            min-width: 80px;
+            min-width: 70px;
             text-align: center;
             font-weight: 500;
         }
 
         .error-message { 
             color: #d93025; 
-            font-size: 15px; 
-            margin-top: -16px; 
-            margin-bottom: 16px; 
+            font-size: 13px; 
+            margin-top: -6px; 
+            margin-bottom: 8px; 
             display: none; 
             text-align: center; 
             font-weight: 500;
@@ -105,10 +106,9 @@
 
     <div class="container">
         <div class="search-box">
-            <input type="text" id="searchInput" placeholder="Search the Success Wheel (e.g., starts, habits, process)...">
+            <input type="text" id="searchInput" placeholder="Search the Success Wheel...">
             <button onclick="startNewSearch()">Search</button>
             
-            <!-- Dynamic Arrow Navigation Section -->
             <div class="nav-controls" id="navControls">
                 <button class="nav-btn" onclick="navigateMatches(-1)">◀</button>
                 <span class="match-count" id="matchCount">0 of 0</span>
@@ -140,7 +140,6 @@
 
         const baseUrl = "https://docs.google.com/presentation/d/16m363rm8KbODBF4_73Jt824KoW6NaEQsueUZ_LTdyFU/embed?start=false&loop=false&delayms=3000";
 
-        // State recovery to keep search context across page refreshes
         let currentMatches = JSON.parse(sessionStorage.getItem('currentMatches')) || [];
         let currentIndex = parseInt(sessionStorage.getItem('currentIndex')) || 0;
         let lastQuery = sessionStorage.getItem('lastQuery') || '';
@@ -150,7 +149,6 @@
             return results ? results[1] : null;
         }
 
-        // Initialize display state on load
         window.onload = function() {
             const targetSlide = getUrlParam('slide') || 'id.p';
             document.getElementById('slidesIframe').src = baseUrl + "&slide=" + targetSlide;
@@ -171,7 +169,6 @@
                 return; 
             }
 
-            // Find ALL slides matching this term
             const matches = [];
             slideData.forEach(item => {
                 const cleanKeywords = item.keywords.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"");
@@ -182,13 +179,9 @@
 
             if (matches.length > 0) {
                 errorDiv.style.display = "none";
-                
-                // Save search context to session storage
                 sessionStorage.setItem('currentMatches', JSON.stringify(matches));
                 sessionStorage.setItem('currentIndex', '0');
                 sessionStorage.setItem('lastQuery', rawQuery);
-
-                // Execute redirect to first match
                 executeRedirect(matches[0]);
             } else {
                 errorDiv.textContent = `"${rawQuery}" not found in the Success Wheel.`;
@@ -201,7 +194,6 @@
         function navigateMatches(direction) {
             if (currentMatches.length <= 1) return;
 
-            // Increment or Decrement counter with circular looping bounds
             let newIndex = currentIndex + direction;
             if (newIndex >= currentMatches.length) newIndex = 0;
             if (newIndex < 0) newIndex = currentMatches.length - 1;
