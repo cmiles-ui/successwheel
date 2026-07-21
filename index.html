@@ -96,7 +96,7 @@
         .icon-btn:hover { background-color: #3a3a3c; }
          
         .nav-controls {
-            display: none; 
+            display: flex; 
             gap: 4px;
             align-items: center;
         }
@@ -199,6 +199,11 @@
         let currentIndex = parseInt(sessionStorage.getItem('currentIndex')) || 0;
         let lastQuery = sessionStorage.getItem('lastQuery') || '';
 
+        function getAllSlideIds() {
+            const masterData = window.slideData || [];
+            return masterData.map(item => item.id);
+        }
+
         function getUrlParam(name) {
             const results = new RegExp('[\?&]' + name + '=([^&#]*)').exec(window.location.href);
             return results ? results[1] : null;
@@ -214,11 +219,17 @@
                 iframe.src = baseUrl + "&slide=" + targetSlide;
             }
 
+            // Restore search query if exists, otherwise initialize with all slides
             if (lastQuery) {
                 const inputField = document.getElementById('searchInput');
                 if (inputField) inputField.value = lastQuery;
-                updateNavigationUI();
+            } else if (currentMatches.length === 0) {
+                currentMatches = getAllSlideIds();
+                const foundIdx = currentMatches.findIndex(id => id.replace(/^id\./gi, '') === cleanSlideId);
+                currentIndex = foundIdx !== -1 ? foundIdx : 0;
             }
+
+            updateNavigationUI();
 
             const inputField = document.getElementById('searchInput');
             if (inputField) {
@@ -235,8 +246,13 @@
             const rawQuery = inputField.value.toLowerCase().trim();
             const errorDiv = document.getElementById('errorMessage');
 
+            // Searching for nothing returns ALL slides
             if (!rawQuery) { 
                 if (errorDiv) errorDiv.style.display = "none"; 
+                currentMatches = getAllSlideIds();
+                currentIndex = 0;
+                sessionStorage.clear();
+                executeRedirect(currentMatches[0] || 'id.p');
                 return; 
             }
 
@@ -268,9 +284,10 @@
                     errorDiv.textContent = `"${rawQuery}" not found in the Success Wheel.`;
                     errorDiv.style.display = "block";
                 }
-                const navControls = document.getElementById('navControls');
-                if (navControls) navControls.style.display = 'none';
+                currentMatches = getAllSlideIds();
+                currentIndex = 0;
                 sessionStorage.clear();
+                updateNavigationUI();
             }
         }
 
