@@ -172,7 +172,7 @@
 
     <div class="container" id="dashboardContainer">
         <div class="search-box">
-            <input type="text" id="searchInput" placeholder="Search the Success Wheel..." autocomplete="off">
+            <input type="text" id="searchInput" placeholder="Search the Success Wheel...">
             <button onclick="startNewSearch()" title="Search">
                 <!-- Magnifying Glass Search SVG Icon -->
                 <svg viewBox="0 0 24 24">
@@ -230,7 +230,7 @@
                 iframe.src = baseUrl + "&slide=" + targetSlide;
             }
 
-            // Always clear search input and reset storage on refresh
+            // Explicitly clear search input on refresh while keeping browser history suggestions
             const inputField = document.getElementById('searchInput');
             if (inputField) {
                 inputField.value = '';
