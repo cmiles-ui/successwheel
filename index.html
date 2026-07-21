@@ -241,21 +241,13 @@
 
             const masterData = window.slideData || [];
             const matches = [];
-            const queryWords = rawQuery.split(/\s+/).filter(w => w.length > 0);
 
             masterData.forEach(item => {
                 if (!item.keywords) return;
                 const text = item.keywords.toLowerCase();
 
-                // Broad match logic (substring inclusion)
-                let isMatch = text.includes(rawQuery);
-
-                // Multi-word fallback matching
-                if (!isMatch && queryWords.length > 1) {
-                    isMatch = queryWords.every(word => text.includes(word));
-                }
-
-                if (isMatch) {
+                // Option 1: Strict Exact Phrase Match (Includes broad substring matching for single or multi-word queries)
+                if (text.includes(rawQuery)) {
                     matches.push(item.id);
                 }
             });
