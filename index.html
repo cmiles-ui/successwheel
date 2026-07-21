@@ -56,7 +56,7 @@
             flex: 1; 
             padding: 8px 12px; 
             font-size: 14px; 
-            background-color: #282828; /* Lightened slightly for subtle contrast */
+            background-color: #282828; 
             color: #ffffff;
             border: 1.5px solid #3c3c3e; 
             border-radius: 6px; 
@@ -67,7 +67,7 @@
         input[type="text"]::placeholder { color: #a0a0a0; }
         input[type="text"]:focus { border-color: #1a73e8; }
         
-        /* Override Chrome/Safari Autofill Styles to match lighter dark background */
+        /* Override Chrome/Safari Autofill Styles */
         input:-webkit-autofill,
         input:-webkit-autofill:hover, 
         input:-webkit-autofill:focus, 
@@ -172,7 +172,7 @@
 
     <div class="container" id="dashboardContainer">
         <div class="search-box">
-            <input type="text" id="searchInput" placeholder="Search the Success Wheel...">
+            <input type="text" id="searchInput" placeholder="Search the Success Wheel..." autocomplete="off">
             <button onclick="startNewSearch()" title="Search">
                 <!-- Magnifying Glass Search SVG Icon -->
                 <svg viewBox="0 0 24 24">
@@ -207,9 +207,8 @@
         const expandIconPath = '<path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>';
         const compressIconPath = '<path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/>';
 
-        let currentMatches = JSON.parse(sessionStorage.getItem('currentMatches')) || [];
-        let currentIndex = parseInt(sessionStorage.getItem('currentIndex')) || 0;
-        let lastQuery = sessionStorage.getItem('lastQuery') || '';
+        let currentMatches = [];
+        let currentIndex = 0;
 
         function getAllSlideIds() {
             const masterData = window.slideData || [];
@@ -231,19 +230,19 @@
                 iframe.src = baseUrl + "&slide=" + targetSlide;
             }
 
-            // Restore search query if exists, otherwise initialize with all slides
-            if (lastQuery) {
-                const inputField = document.getElementById('searchInput');
-                if (inputField) inputField.value = lastQuery;
-            } else if (currentMatches.length === 0) {
-                currentMatches = getAllSlideIds();
-                const foundIdx = currentMatches.findIndex(id => id.replace(/^id\./gi, '') === cleanSlideId);
-                currentIndex = foundIdx !== -1 ? foundIdx : 0;
+            // Always clear search input and reset storage on refresh
+            const inputField = document.getElementById('searchInput');
+            if (inputField) {
+                inputField.value = '';
             }
+
+            sessionStorage.clear();
+            currentMatches = getAllSlideIds();
+            const foundIdx = currentMatches.findIndex(id => id.replace(/^id\./gi, '') === cleanSlideId);
+            currentIndex = foundIdx !== -1 ? foundIdx : 0;
 
             updateNavigationUI();
 
-            const inputField = document.getElementById('searchInput');
             if (inputField) {
                 inputField.addEventListener('keypress', function (e) {
                     if (e.key === 'Enter') { startNewSearch(); }
