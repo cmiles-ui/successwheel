@@ -69,13 +69,25 @@
             cursor: pointer; 
             font-weight: 600; 
             white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
         }
         button:hover { background-color: #1557b0; }
          
-        .fullscreen-btn {
+        .icon-btn {
             background-color: #3c4043;
+            padding: 8px;
+            width: 36px;
+            height: 36px;
+            flex-shrink: 0;
         }
-        .fullscreen-btn:hover { background-color: #202124; }
+        .icon-btn:hover { background-color: #202124; }
+        .icon-btn svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+        }
          
         .nav-controls {
             display: none; 
@@ -158,7 +170,12 @@
                 <button class="nav-btn" onclick="navigateMatches(1)">▶</button>
             </div>
              
-            <button class="fullscreen-btn" id="fsToggleBtn" onclick="toggleFullscreen()">⛶ Fullscreen</button>
+            <button class="icon-btn" id="fsToggleBtn" onclick="toggleFullscreen()" title="Toggle Fullscreen">
+                <!-- Fullscreen Expand SVG Icon -->
+                <svg id="fsIcon" viewBox="0 0 24 24">
+                    <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>
+                </svg>
+            </button>
         </div>
         <div id="errorMessage" class="error-message"></div>
 
@@ -169,6 +186,10 @@
 
     <script>
         const baseUrl = "https://docs.google.com/presentation/d/16m363rm8KbODBF4_73Jt824KoW6NaEQsueUZ_LTdyFU/embed?start=false&loop=false&delayms=3000&rm=minimal";
+
+        // SVG icon definitions for easy switching
+        const expandIconPath = '<path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>';
+        const compressIconPath = '<path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/>';
 
         let currentMatches = JSON.parse(sessionStorage.getItem('currentMatches')) || [];
         let currentIndex = parseInt(sessionStorage.getItem('currentIndex')) || 0;
@@ -226,7 +247,7 @@
                 // Broad match logic (substring inclusion)
                 let isMatch = text.includes(rawQuery);
 
-                // Multi-word fallback matching (ensures all typed words exist in the text string)
+                // Multi-word fallback matching
                 if (!isMatch && queryWords.length > 1) {
                     isMatch = queryWords.every(word => text.includes(word));
                 }
@@ -298,25 +319,29 @@
 
         function toggleFullscreen() {
             const container = document.getElementById('dashboardContainer');
-            const fsBtn = document.getElementById('fsToggleBtn');
-            if (!container || !fsBtn) return;
+            if (!container) return;
 
             if (!document.fullscreenElement) {
-                container.requestFullscreen().then(() => {
-                    fsBtn.textContent = "Collapse";
-                }).catch(err => {
+                container.requestFullscreen().catch(err => {
                     console.error(`Error moving to fullscreen: ${err.message}`);
                 });
             } else {
                 document.exitFullscreen();
-                fsBtn.textContent = "⛶ Fullscreen";
             }
         }
 
+        // Listener updates icon based on actual full-screen state (including ESC key presses)
         document.addEventListener('fullscreenchange', () => {
+            const fsIcon = document.getElementById('fsIcon');
             const fsBtn = document.getElementById('fsToggleBtn');
-            if (fsBtn && !document.fullscreenElement) {
-                fsBtn.textContent = "⛶ Fullscreen";
+            if (!fsIcon || !fsBtn) return;
+
+            if (document.fullscreenElement) {
+                fsIcon.innerHTML = compressIconPath;
+                fsBtn.setAttribute('title', 'Exit Fullscreen');
+            } else {
+                fsIcon.innerHTML = expandIconPath;
+                fsBtn.setAttribute('title', 'Toggle Fullscreen');
             }
         });
     </script>
