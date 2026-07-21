@@ -56,23 +56,23 @@
             flex: 1; 
             padding: 8px 12px; 
             font-size: 14px; 
-            background-color: #1e1e1e;
+            background-color: #282828; /* Lightened slightly for subtle contrast */
             color: #ffffff;
-            border: 1.5px solid #333333; 
+            border: 1.5px solid #3c3c3e; 
             border-radius: 6px; 
             outline: none; 
-            transition: border-color 0.2s;
+            transition: border-color 0.2s, background-color 0.2s;
             height: 35px;
         }
-        input[type="text"]::placeholder { color: #888888; }
+        input[type="text"]::placeholder { color: #a0a0a0; }
         input[type="text"]:focus { border-color: #1a73e8; }
         
-        /* Override Chrome/Safari Autofill Styles */
+        /* Override Chrome/Safari Autofill Styles to match lighter dark background */
         input:-webkit-autofill,
         input:-webkit-autofill:hover, 
         input:-webkit-autofill:focus, 
         input:-webkit-autofill:active {
-            -webkit-box-shadow: 0 0 0 30px #1e1e1e inset !important;
+            -webkit-box-shadow: 0 0 0 30px #282828 inset !important;
             -webkit-text-fill-color: #ffffff !important;
             caret-color: #ffffff;
             transition: background-color 5000s ease-in-out 0s;
