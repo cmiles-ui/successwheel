@@ -19,11 +19,11 @@
         .container {
             width: 100%;
             max-width: 100%; 
-            background: #000000; /* Pure black to match body */
+            background: #000000;
             padding: 10px;
             border-radius: 0;
-            box-shadow: none; /* Removed grey card shadow */
-            border: none; /* Removed grey border */
+            box-shadow: none; 
+            border: none; 
             transition: all 0.3s ease;
         }
         .container:fullscreen {
@@ -40,14 +40,14 @@
         }
         .search-box { 
             margin: 0 auto 12px auto; 
-            max-width: 700px; 
+            max-width: 750px; 
             display: flex; 
             gap: 6px; 
             align-items: center;
             width: 100%;
         }
         .container:fullscreen .search-box {
-            max-width: 800px;
+            max-width: 850px;
             background: rgba(255, 255, 255, 0.05);
             padding: 10px;
             border-radius: 8px;
@@ -100,6 +100,20 @@
             height: 16px;
             fill: currentColor;
         }
+
+        .ai-btn {
+            background-color: #2c2c2e;
+            color: #8ab4f8;
+            font-size: 12px;
+            padding: 0 10px;
+            width: auto;
+            gap: 4px;
+            border: 1px solid #3c3c3e;
+        }
+        .ai-btn:hover {
+            background-color: #3a3a3c;
+            color: #abc7ff;
+        }
          
         .icon-btn {
             background-color: #2c2c2e;
@@ -143,6 +157,37 @@
             text-align: center; 
             font-weight: 500;
         }
+
+        /* AI Answer Card Styling */
+        .ai-card {
+            display: none;
+            max-width: 750px;
+            margin: 0 auto 12px auto;
+            background: #1e1e1e;
+            border: 1px solid #333333;
+            border-radius: 8px;
+            padding: 12px 16px;
+            color: #e8eaed;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .ai-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 12px;
+            font-weight: 600;
+            color: #8ab4f8;
+            margin-bottom: 6px;
+        }
+        .ai-close-btn {
+            cursor: pointer;
+            color: #888;
+            font-size: 16px;
+            line-height: 1;
+        }
+        .ai-close-btn:hover { color: #fff; }
+
         .iframe-wrapper { 
             position: relative; 
             width: 100%; 
@@ -172,12 +217,16 @@
 
     <div class="container" id="dashboardContainer">
         <div class="search-box">
-            <input type="text" id="searchInput" placeholder="Search the Success Wheel...">
+            <input type="text" id="searchInput" placeholder="Search or ask a question...">
             <button onclick="startNewSearch()" title="Search">
                 <!-- Magnifying Glass Search SVG Icon -->
                 <svg viewBox="0 0 24 24">
                     <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
                 </svg>
+            </button>
+
+            <button class="ai-btn" onclick="askAI()" title="Ask AI Summary">
+                ✨ Ask AI
             </button>
              
             <div class="nav-controls" id="navControls">
@@ -193,6 +242,16 @@
                 </svg>
             </button>
         </div>
+
+        <!-- AI Summary Card -->
+        <div id="aiCard" class="ai-card">
+            <div class="ai-card-header">
+                <span>✨ AI ANSWER</span>
+                <span class="ai-close-btn" onclick="closeAICard()">✕</span>
+            </div>
+            <div id="aiAnswerContent">Thinking...</div>
+        </div>
+
         <div id="errorMessage" class="error-message"></div>
 
         <div class="iframe-wrapper">
@@ -202,8 +261,8 @@
 
     <script>
         const baseUrl = "https://docs.google.com/presentation/d/16m363rm8KbODBF4_73Jt824KoW6NaEQsueUZ_LTdyFU/embed?start=false&loop=false&delayms=3000&rm=minimal";
+        const workerUrl = "YOUR_CLOUDFLARE_WORKER_URL_HERE"; // <--- Replace with your Worker URL
 
-        // SVG icon definitions for easy switching
         const expandIconPath = '<path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/>';
         const compressIconPath = '<path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/>';
 
@@ -230,7 +289,6 @@
                 iframe.src = baseUrl + "&slide=" + targetSlide;
             }
 
-            // Clear search input on refresh while allowing browser autosuggest dropdown
             const inputField = document.getElementById('searchInput');
             if (inputField) {
                 inputField.value = '';
@@ -251,13 +309,13 @@
         });
 
         function startNewSearch() {
+            closeAICard();
             const inputField = document.getElementById('searchInput');
             if (!inputField) return;
              
             const rawQuery = inputField.value.toLowerCase().trim();
             const errorDiv = document.getElementById('errorMessage');
 
-            // Searching for nothing returns ALL slides
             if (!rawQuery) { 
                 if (errorDiv) errorDiv.style.display = "none"; 
                 currentMatches = getAllSlideIds();
@@ -274,7 +332,6 @@
                 if (!item.keywords) return;
                 const text = item.keywords.toLowerCase();
 
-                // Strict Exact Phrase Match
                 if (text.includes(rawQuery)) {
                     matches.push(item.id);
                 }
@@ -300,6 +357,48 @@
                 sessionStorage.clear();
                 updateNavigationUI();
             }
+        }
+
+        async function askAI() {
+            const inputField = document.getElementById('searchInput');
+            const aiCard = document.getElementById('aiCard');
+            const aiContent = document.getElementById('aiAnswerContent');
+            if (!inputField || !aiCard || !aiContent) return;
+
+            const prompt = inputField.value.trim();
+            if (!prompt) {
+                aiContent.textContent = "Please enter a question or topic in the search box first.";
+                aiCard.style.display = "block";
+                return;
+            }
+
+            aiContent.textContent = "Thinking...";
+            aiCard.style.display = "block";
+
+            // Also trigger standard keyword search alongside AI answer
+            startNewSearch();
+
+            // Extract all text context from slideData
+            const masterData = window.slideData || [];
+            const fullContext = masterData.map(item => item.keywords).join("\n---\n");
+
+            try {
+                const response = await fetch(workerUrl, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ prompt, context: fullContext })
+                });
+
+                const data = await response.json();
+                aiContent.textContent = data.reply || data.error || "Unable to retrieve AI answer.";
+            } catch (err) {
+                aiContent.textContent = "Error connecting to AI service. Ensure your Worker URL is configured.";
+            }
+        }
+
+        function closeAICard() {
+            const aiCard = document.getElementById('aiCard');
+            if (aiCard) aiCard.style.display = "none";
         }
 
         function navigateMatches(direction) {
@@ -354,7 +453,6 @@
             }
         }
 
-        // Listener updates icon based on actual full-screen state (including ESC key presses)
         document.addEventListener('fullscreenchange', () => {
             const fsIcon = document.getElementById('fsIcon');
             const fsBtn = document.getElementById('fsToggleBtn');
