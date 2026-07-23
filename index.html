@@ -363,6 +363,7 @@
             const inputField = document.getElementById('searchInput');
             const aiCard = document.getElementById('aiCard');
             const aiContent = document.getElementById('aiAnswerContent');
+            const errorDiv = document.getElementById('errorMessage');
             if (!inputField || !aiCard || !aiContent) return;
 
             const prompt = inputField.value.trim();
@@ -372,15 +373,15 @@
                 return;
             }
 
-            aiContent.textContent = "Thinking...";
-            aiCard.style.display = "block";
+            // Hide any previous strict keyword search error
+            if (errorDiv) errorDiv.style.display = "none";
 
-            // Also trigger standard keyword search alongside AI answer
-            startNewSearch();
+            aiContent.textContent = "Analyzing deck & crafting response...";
+            aiCard.style.display = "block";
 
             // Extract all text context from slideData
             const masterData = window.slideData || [];
-            const fullContext = masterData.map(item => item.keywords).join("\n---\n");
+            const fullContext = masterData.map(item => `[Slide ID: ${item.id}]\n${item.keywords}`).join("\n---\n");
 
             try {
                 const response = await fetch(workerUrl, {
@@ -390,9 +391,24 @@
                 });
 
                 const data = await response.json();
+                
+                // 1. Display the written answer
                 aiContent.textContent = data.reply || data.error || "Unable to retrieve AI answer.";
+
+                // 2. Automatically jump to the corresponding slide
+                if (data.bestSlideId) {
+                    const masterIds = getAllSlideIds();
+                    const foundIdx = masterIds.findIndex(id => id.replace(/^id\./gi, '') === data.bestSlideId.replace(/^id\./gi, ''));
+                    
+                    if (foundIdx !== -1) {
+                        currentMatches = [masterIds[foundIdx]]; // Focus on the target slide
+                        currentIndex = 0;
+                        executeRedirect(masterIds[foundIdx]);
+                    }
+                }
+
             } catch (err) {
-                aiContent.textContent = "Error connecting to AI service. Ensure your Worker URL is configured.";
+                aiContent.textContent = "Error connecting to AI service. Ensure your Worker URL is configured correctly.";
             }
         }
 
