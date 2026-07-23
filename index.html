@@ -391,9 +391,14 @@
                 });
 
                 const data = await response.json();
+
+                if (!response.ok || data.error) {
+                    aiContent.textContent = "Error: " + (data.error || "Unable to reach Cloudflare Worker.");
+                    return;
+                }
                 
                 // 1. Display the written answer
-                aiContent.textContent = data.reply || data.error || "Unable to retrieve AI answer.";
+                aiContent.textContent = data.reply || "Unable to retrieve AI answer.";
 
                 // 2. Automatically jump to the corresponding slide
                 if (data.bestSlideId) {
