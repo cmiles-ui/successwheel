@@ -100,16 +100,6 @@
             height: 16px;
             fill: currentColor;
         }
-
-        .ai-btn {
-            background-color: #2c2c2e;
-            color: #ffffff;
-            border: none;
-        }
-        .ai-btn:hover {
-            background-color: #3a3a3c;
-            color: #ffffff;
-        }
          
         .icon-btn {
             background-color: #2c2c2e;
@@ -242,18 +232,11 @@
 
     <div class="container" id="dashboardContainer">
         <div class="search-box">
-            <input type="text" id="searchInput" placeholder="Search or ask a question...">
-            <button onclick="startNewSearch()" title="Search">
+            <input type="text" id="searchInput" placeholder="Ask a question or topic...">
+            <button onclick="handleSearch()" title="Search AI Knowledge">
                 <!-- Magnifying Glass Search SVG Icon -->
                 <svg viewBox="0 0 24 24">
                     <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
-                </svg>
-            </button>
-
-            <button class="ai-btn" onclick="askAI()" title="Ask AI Summary">
-                <!-- AI Sparkle SVG Icon -->
-                <svg viewBox="0 0 24 24">
-                    <path d="M19 9l1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25L19 9zm-7.5.5L9 3 6.5 9.5 0 12l6.5 2.5L9 21l2.5-6.5L18 12l-6.5-2.5zM19 15l-1.25 2.75L15 19l2.75 1.25L19 23l1.25-2.75L23 19l-2.75-1.25L19 15z"/>
                 </svg>
             </button>
              
@@ -331,20 +314,21 @@
 
             if (inputField) {
                 inputField.addEventListener('keypress', function (e) {
-                    if (e.key === 'Enter') { startNewSearch(); }
+                    if (e.key === 'Enter') { handleSearch(); }
                 });
             }
         });
 
-        function startNewSearch() {
-            closeAICard();
+        // Unified Search Handler
+        function handleSearch() {
             const inputField = document.getElementById('searchInput');
             if (!inputField) return;
-             
-            const rawQuery = inputField.value.toLowerCase().trim();
+
+            const prompt = inputField.value.trim();
             const errorDiv = document.getElementById('errorMessage');
 
-            if (!rawQuery) { 
+            if (!prompt) { 
+                closeAICard();
                 if (errorDiv) errorDiv.style.display = "none"; 
                 currentMatches = getAllSlideIds();
                 currentIndex = 0;
@@ -353,58 +337,19 @@
                 return; 
             }
 
-            const masterData = window.slideData || [];
-            const matches = [];
-
-            masterData.forEach(item => {
-                if (!item.keywords) return;
-                const text = item.keywords.toLowerCase();
-
-                if (text.includes(rawQuery)) {
-                    matches.push(item.id);
-                }
-            });
-
-            if (matches.length > 0) {
-                if (errorDiv) errorDiv.style.display = "none";
-                currentMatches = matches;
-                currentIndex = 0;
-                 
-                sessionStorage.setItem('currentMatches', JSON.stringify(matches));
-                sessionStorage.setItem('currentIndex', '0');
-                sessionStorage.setItem('lastQuery', rawQuery);
-                 
-                executeRedirect(matches[0]);
-            } else {
-                if (errorDiv) {
-                    errorDiv.textContent = `"${rawQuery}" not found in the Success Wheel.`;
-                    errorDiv.style.display = "block";
-                }
-                currentMatches = getAllSlideIds();
-                currentIndex = 0;
-                sessionStorage.clear();
-                updateNavigationUI();
-            }
+            askAI(prompt);
         }
 
-        async function askAI() {
-            const inputField = document.getElementById('searchInput');
+        async function askAI(prompt) {
             const aiCard = document.getElementById('aiCard');
             const aiContent = document.getElementById('aiAnswerContent');
             const errorDiv = document.getElementById('errorMessage');
-            if (!inputField || !aiCard || !aiContent) return;
+            if (!aiCard || !aiContent) return;
 
-            const prompt = inputField.value.trim();
-            if (!prompt) {
-                aiContent.textContent = "Please enter a question or topic in the search box first.";
-                aiCard.style.display = "block";
-                return;
-            }
-
-            // Hide any previous strict keyword search error
+            // Clear any error messages
             if (errorDiv) errorDiv.style.display = "none";
 
-            // Inject Gemini 3 Dancing Dots Loader
+            // Inject Gemini Dancing Dots Loader
             aiContent.innerHTML = '<div class="dots-loader"><div></div><div></div><div></div></div>';
             aiCard.style.display = "block";
 
