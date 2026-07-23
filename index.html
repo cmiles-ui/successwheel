@@ -233,7 +233,7 @@
     <div class="container" id="dashboardContainer">
         <div class="search-box">
             <input type="text" id="searchInput" placeholder="Search or ask a question...">
-            <button onclick="handleSearch()" title="Search">
+            <button onclick="handleSearch()" title="Search Knowledge">
                 <!-- Magnifying Glass Search SVG Icon -->
                 <svg viewBox="0 0 24 24">
                     <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
@@ -319,16 +319,16 @@
             }
         });
 
-        // Smart Hybrid Search Handler
+        // Unified Search Handler (All searches trigger AI)
         function handleSearch() {
-            closeAICard();
             const inputField = document.getElementById('searchInput');
             if (!inputField) return;
 
-            const query = inputField.value.trim().toLowerCase();
+            const prompt = inputField.value.trim();
             const errorDiv = document.getElementById('errorMessage');
 
-            if (!query) { 
+            if (!prompt) { 
+                closeAICard();
                 if (errorDiv) errorDiv.style.display = "none"; 
                 currentMatches = getAllSlideIds();
                 currentIndex = 0;
@@ -337,27 +337,7 @@
                 return; 
             }
 
-            const questionWords = ["what", "why", "how", "who", "where", "can", "should", "does", "is", "are", "which", "tell"];
-            const isQuestion = query.endsWith('?') || questionWords.some(w => query.startsWith(w + " ")) || query.split(' ').length > 4;
-
-            // 1. Try local keyword search first (unless explicitly a question)
-            if (!isQuestion) {
-                const masterData = window.slideData || [];
-                const matches = masterData.filter(item => item.keywords && item.keywords.toLowerCase().includes(query)).map(i => i.id);
-
-                if (matches.length > 0) {
-                    if (errorDiv) errorDiv.style.display = "none";
-                    currentMatches = matches;
-                    currentIndex = 0;
-                    sessionStorage.setItem('currentMatches', JSON.stringify(matches));
-                    sessionStorage.setItem('currentIndex', '0');
-                    executeRedirect(matches[0]);
-                    return; // Clean keyword match! No AI needed.
-                }
-            }
-
-            // 2. Fall back to AI if it's a natural question or local keywords found 0 matches
-            askAI(inputField.value.trim());
+            askAI(prompt);
         }
 
         async function askAI(prompt) {
@@ -368,9 +348,11 @@
 
             if (errorDiv) errorDiv.style.display = "none";
 
+            // Inject Gemini Dancing Dots Loader
             aiContent.innerHTML = '<div class="dots-loader"><div></div><div></div><div></div></div>';
             aiCard.style.display = "block";
 
+            // Extract all text context from slideData
             const masterData = window.slideData || [];
             const fullContext = masterData.map(item => `[Slide ID: ${item.id}]\n${item.keywords}`).join("\n---\n");
 
@@ -388,8 +370,10 @@
                     return;
                 }
                 
+                // 1. Display the written answer
                 aiContent.textContent = data.reply || "Unable to retrieve AI answer.";
 
+                // 2. Automatically jump to the corresponding slide
                 if (data.bestSlideId) {
                     const masterIds = getAllSlideIds();
                     const foundIdx = masterIds.findIndex(id => id.replace(/^id\./gi, '') === data.bestSlideId.replace(/^id\./gi, ''));
