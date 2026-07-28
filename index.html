@@ -402,8 +402,9 @@
             aiCard.style.display = "block";
 
             const masterData = window.slideData || [];
+            // Sends the FULL text of every slide (no character capping)
             const fullContext = masterData.map(item => {
-                const text = item.keywords ? item.keywords.substring(0, 300) : "";
+                const text = item.keywords || "";
                 return `[Slide ID: ${item.id}]\n${text}`;
             }).join("\n---\n");
 
@@ -436,9 +437,10 @@
                     const masterIds = getAllSlideIds();
                     const validRanked = [];
 
+                    // Case-insensitive target ID resolution
                     targetSlides.forEach(target => {
-                        const cleanTarget = target.replace(/^id\./gi, '');
-                        const foundMasterIdx = masterIds.findIndex(id => id.replace(/^id\./gi, '') === cleanTarget);
+                        const cleanTarget = target.replace(/^id\./gi, '').toLowerCase();
+                        const foundMasterIdx = masterIds.findIndex(id => id.replace(/^id\./gi, '').toLowerCase() === cleanTarget);
                         if (foundMasterIdx !== -1) {
                             validRanked.push(masterIds[foundMasterIdx]);
                         }
