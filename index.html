@@ -285,8 +285,14 @@
             return masterData.map(item => item.id);
         }
 
+        // Dynamically identifies the exact ID of the title slide (Index 0 in window.slideData)
+        function getTitleSlideId() {
+            const masterData = window.slideData || [];
+            return masterData.length > 0 ? masterData[0].id : "id.p";
+        }
+
         document.addEventListener("DOMContentLoaded", function() {
-            const defaultSlide = "id.p";
+            const defaultSlide = getTitleSlideId();
 
             const iframe = document.getElementById('slidesIframe');
             if (iframe) {
@@ -311,14 +317,16 @@
             updateNavigationUI();
         });
 
-        // Strict local filter: Ignores common conversational filler words and caps local results to MAX 3 slides
+        // Strict local filter: Purges title slide dynamically and limits matches to MAX 3 content slides
         function filterSlidesLocally(query) {
             const masterData = window.slideData || [];
-            const contentSlides = masterData.filter(item => item.id !== "id.p");
+            const titleId = getTitleSlideId();
+            
+            // Exclude index 0 / title slide ID dynamically
+            const contentSlides = masterData.filter(item => item.id !== titleId && item.id !== "id.p");
 
             if (!query) return contentSlides.map(item => item.id);
 
-            // Ignore ultra-broad words like company, our, feel, employees, who, do, etc.
             const stopWords = new Set([
                 "how", "do", "we", "i", "can", "move", "into", "to", "the", "a", "an", "is", "of", 
                 "and", "or", "for", "on", "another", "what", "become", "be", "in", "my", "our",
@@ -330,22 +338,19 @@
                 .split(/\s+/)
                 .filter(term => term.length > 2 && !stopWords.has(term));
 
-            // If query only contained stop words, return top 3 content slides max as placeholder
             if (terms.length === 0) {
                 return contentSlides.slice(0, 3).map(item => item.id);
             }
 
-            // 1. Strict match: slides containing ALL specific search terms
             const strictMatches = contentSlides.filter(item => {
                 const slideText = (item.keywords || "").toLowerCase();
                 return terms.every(term => slideText.includes(term));
             }).map(item => item.id);
 
             if (strictMatches.length > 0) {
-                return strictMatches.slice(0, 3); // Max 3
+                return strictMatches.slice(0, 3);
             }
 
-            // 2. Loose match: slides containing ANY term
             const looseMatches = contentSlides.filter(item => {
                 const slideText = (item.keywords || "").toLowerCase();
                 return terms.some(term => slideText.includes(term));
@@ -371,16 +376,17 @@
                 return; 
             }
 
-            // 1. Filter local matches (Hard capped at 3 max)
+            // 1. Instantly filter local content slides (max 3, never title slide)
             currentMatches = filterSlidesLocally(prompt);
             currentIndex = 0;
             updateNavigationUI();
 
+            // 2. Immediately redirect to the top local content slide while AI evaluates
             if (currentMatches.length > 0) {
                 executeRedirect(currentMatches[0]);
             }
 
-            // 2. Trigger AI search to get exact ranked list
+            // 3. Trigger AI search
             askAI(prompt);
         }
 
@@ -417,12 +423,12 @@
 
                 aiContent.textContent = data.reply || "Unable to retrieve AI answer.";
 
-                // Process AI-ranked slides (Support both array and fallback single ID)
+                const titleId = getTitleSlideId();
                 let targetSlides = [];
 
                 if (data.rankedSlides && Array.isArray(data.rankedSlides) && data.rankedSlides.length > 0) {
-                    targetSlides = data.rankedSlides;
-                } else if (data.bestSlideId && data.bestSlideId !== "id.p") {
+                    targetSlides = data.rankedSlides.filter(id => id !== titleId && id !== "id.p");
+                } else if (data.bestSlideId && data.bestSlideId !== titleId && data.bestSlideId !== "id.p") {
                     targetSlides = [data.bestSlideId];
                 }
 
@@ -439,7 +445,7 @@
                     });
 
                     if (validRanked.length > 0) {
-                        // Strictly replace matches with the AI's ranked slides (Max 3-5 slides)
+                        // Replace matches with AI-ranked content slides strictly (max 3-5)
                         currentMatches = validRanked.slice(0, 5);
                         currentIndex = 0;
                         executeRedirect(currentMatches[0]);
