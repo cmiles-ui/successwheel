@@ -313,20 +313,25 @@
             updateNavigationUI();
         });
 
-        // Filter local slideData for keyword/phrase matches
+        // Smart local filter: strip stop words and match slide content
         function filterSlidesLocally(query) {
             const masterData = window.slideData || [];
             if (!query) return masterData.map(item => item.id);
 
-            const terms = query.toLowerCase().split(' ').filter(t => t.length > 2);
+            const stopWords = new Set(["how", "do", "i", "can", "in", "to", "the", "a", "an", "is", "of", "and", "or", "for", "on", "into", "what"]);
+            const terms = query.toLowerCase()
+                .replace(/[^\w\s]/gi, '')
+                .split(/\s+/)
+                .filter(term => term.length > 2 && !stopWords.has(term));
+
             if (terms.length === 0) return masterData.map(item => item.id);
 
-            const matches = masterData.filter(item => {
-                const text = (item.keywords || "").toLowerCase();
-                return terms.some(term => text.includes(term));
+            const matchedSlides = masterData.filter(item => {
+                const slideText = (item.keywords || "").toLowerCase();
+                return terms.some(term => slideText.includes(term));
             }).map(item => item.id);
 
-            return matches.length > 0 ? matches : masterData.map(item => item.id);
+            return matchedSlides.length > 0 ? matchedSlides : masterData.map(item => item.id);
         }
 
         function handleSearch() {
@@ -346,12 +351,12 @@
                 return; 
             }
 
-            // 1. Instantly filter local matching slides
+            // 1. Immediately filter matching slides locally
             currentMatches = filterSlidesLocally(prompt);
             currentIndex = 0;
             updateNavigationUI();
 
-            // 2. Trigger AI answer & jump to best slide
+            // 2. Query Worker for answer & navigate to best slide
             askAI(prompt);
         }
 
@@ -386,10 +391,10 @@
                     return;
                 }
 
-                // Render clean reply
+                // Render answer text
                 aiContent.textContent = data.reply || "Unable to retrieve AI answer.";
 
-                // 3. Prioritize AI's best slide ID inside current filtered set
+                // Jump directly to corresponding slide
                 if (data.bestSlideId) {
                     const masterIds = getAllSlideIds();
                     const cleanTarget = data.bestSlideId.replace(/^id\./gi, '');
@@ -399,7 +404,6 @@
                     if (foundMasterIdx !== -1) {
                         const targetId = masterIds[foundMasterIdx];
                         
-                        // Check if best slide is in our filtered set; if not, prepend it
                         let filteredIdx = currentMatches.indexOf(targetId);
                         if (filteredIdx === -1) {
                             currentMatches.unshift(targetId);
