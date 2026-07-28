@@ -347,7 +347,7 @@
             aiContent.innerHTML = '<div class="dots-loader"><div></div><div></div><div></div></div>';
             aiCard.style.display = "block";
 
-            // Optimized Light Payload: Truncate long slide strings to 300 chars max
+            // Lightweight Context Payload (Truncated to 300 chars max)
             const masterData = window.slideData || [];
             const fullContext = masterData.map(item => {
                 const text = item.keywords ? item.keywords.substring(0, 300) : "";
@@ -367,9 +367,21 @@
                     aiContent.textContent = "Error: " + (data.error || "Unable to reach Cloudflare Worker.");
                     return;
                 }
-                
-                // Display the rapid answer
-                aiContent.textContent = data.reply || "Unable to retrieve AI answer.";
+
+                let displayText = data.reply || "";
+
+                // Robust Client-side Cleanup: Parse inner reply text if response contains raw JSON markup
+                if (typeof displayText === 'string' && displayText.includes('"reply"')) {
+                    const match = displayText.match(/"reply"\s*:\s*"([^"]+)"/i);
+                    if (match) {
+                        displayText = match[1];
+                    } else {
+                        // Strip leading JSON brackets/syntax if present
+                        displayText = displayText.replace(/^\{\s*"reply"\s*:\s*"?/i, '').replace(/",?\s*"bestSlideId".*$/i, '');
+                    }
+                }
+
+                aiContent.textContent = displayText || "Unable to retrieve AI answer.";
 
                 // Jump directly to corresponding slide
                 if (data.bestSlideId) {
