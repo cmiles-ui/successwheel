@@ -288,7 +288,6 @@
         }
 
         document.addEventListener("DOMContentLoaded", function() {
-            // Always default back to Slide 1 (id.p) on fresh page load or refresh
             const defaultSlide = "id.p";
 
             const iframe = document.getElementById('slidesIframe');
@@ -296,7 +295,6 @@
                 iframe.src = baseUrl + "&slide=" + defaultSlide;
             }
 
-            // Clean up the URL parameter on refresh
             const currentUrlWithoutParams = window.location.href.split('?')[0];
             history.replaceState({slide: defaultSlide}, '', currentUrlWithoutParams);
 
@@ -315,6 +313,22 @@
             updateNavigationUI();
         });
 
+        // Filter local slideData for keyword/phrase matches
+        function filterSlidesLocally(query) {
+            const masterData = window.slideData || [];
+            if (!query) return masterData.map(item => item.id);
+
+            const terms = query.toLowerCase().split(' ').filter(t => t.length > 2);
+            if (terms.length === 0) return masterData.map(item => item.id);
+
+            const matches = masterData.filter(item => {
+                const text = (item.keywords || "").toLowerCase();
+                return terms.some(term => text.includes(term));
+            }).map(item => item.id);
+
+            return matches.length > 0 ? matches : masterData.map(item => item.id);
+        }
+
         function handleSearch() {
             const inputField = document.getElementById('searchInput');
             if (!inputField) return;
@@ -332,6 +346,12 @@
                 return; 
             }
 
+            // 1. Instantly filter local matching slides
+            currentMatches = filterSlidesLocally(prompt);
+            currentIndex = 0;
+            updateNavigationUI();
+
+            // 2. Trigger AI answer & jump to best slide
             askAI(prompt);
         }
 
@@ -343,11 +363,9 @@
 
             if (errorDiv) errorDiv.style.display = "none";
 
-            // Inject Gemini Dancing Dots Loader
             aiContent.innerHTML = '<div class="dots-loader"><div></div><div></div><div></div></div>';
             aiCard.style.display = "block";
 
-            // Lightweight Context Payload (Truncated to 300 chars max)
             const masterData = window.slideData || [];
             const fullContext = masterData.map(item => {
                 const text = item.keywords ? item.keywords.substring(0, 300) : "";
@@ -368,30 +386,28 @@
                     return;
                 }
 
-                let displayText = data.reply || "";
+                // Render clean reply
+                aiContent.textContent = data.reply || "Unable to retrieve AI answer.";
 
-                // Robust Client-side Cleanup: Parse inner reply text if response contains raw JSON markup
-                if (typeof displayText === 'string' && displayText.includes('"reply"')) {
-                    const match = displayText.match(/"reply"\s*:\s*"([^"]+)"/i);
-                    if (match) {
-                        displayText = match[1];
-                    } else {
-                        // Strip leading JSON brackets/syntax if present
-                        displayText = displayText.replace(/^\{\s*"reply"\s*:\s*"?/i, '').replace(/",?\s*"bestSlideId".*$/i, '');
-                    }
-                }
-
-                aiContent.textContent = displayText || "Unable to retrieve AI answer.";
-
-                // Jump directly to corresponding slide
+                // 3. Prioritize AI's best slide ID inside current filtered set
                 if (data.bestSlideId) {
                     const masterIds = getAllSlideIds();
-                    const foundIdx = masterIds.findIndex(id => id.replace(/^id\./gi, '') === data.bestSlideId.replace(/^id\./gi, ''));
+                    const cleanTarget = data.bestSlideId.replace(/^id\./gi, '');
                     
-                    if (foundIdx !== -1) {
-                        currentMatches = [masterIds[foundIdx]];
-                        currentIndex = 0;
-                        executeRedirect(masterIds[foundIdx]);
+                    const foundMasterIdx = masterIds.findIndex(id => id.replace(/^id\./gi, '') === cleanTarget);
+
+                    if (foundMasterIdx !== -1) {
+                        const targetId = masterIds[foundMasterIdx];
+                        
+                        // Check if best slide is in our filtered set; if not, prepend it
+                        let filteredIdx = currentMatches.indexOf(targetId);
+                        if (filteredIdx === -1) {
+                            currentMatches.unshift(targetId);
+                            filteredIdx = 0;
+                        }
+
+                        currentIndex = filteredIdx;
+                        executeRedirect(targetId);
                     }
                 }
 
