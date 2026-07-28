@@ -311,7 +311,7 @@
             updateNavigationUI();
         });
 
-        // Strict local filter: Filters ONLY relevant content slides and explicitly EXCLUDES title slide (id.p)
+        // Strict local filter with expanded stop words to prevent broad matches
         function filterSlidesLocally(query) {
             const masterData = window.slideData || [];
             
@@ -320,7 +320,12 @@
 
             if (!query) return contentSlides.map(item => item.id);
 
-            const stopWords = new Set(["how", "do", "i", "can", "move", "into", "to", "the", "a", "an", "is", "of", "and", "or", "for", "on", "another", "what"]);
+            // Comprehensive list of stop words to ignore filler words like "how do I become a"
+            const stopWords = new Set([
+                "how", "do", "i", "can", "move", "into", "to", "the", "a", "an", "is", "of", 
+                "and", "or", "for", "on", "another", "what", "become", "be", "in", "my", "our",
+                "would", "like", "want", "should", "if", "get"
+            ]);
             
             const terms = query.toLowerCase()
                 .replace(/[^\w\s]/gi, '')
@@ -329,7 +334,7 @@
 
             if (terms.length === 0) return contentSlides.map(item => item.id);
 
-            // Require ALL terms to match first
+            // 1. Strict match: slides containing ALL core subject terms (e.g. "manager")
             const strictMatches = contentSlides.filter(item => {
                 const slideText = (item.keywords || "").toLowerCase();
                 return terms.every(term => slideText.includes(term));
@@ -337,7 +342,7 @@
 
             if (strictMatches.length > 0) return strictMatches;
 
-            // Fallback to ANY term matching if strict yields none
+            // 2. Loose match: slides containing ANY core term
             const looseMatches = contentSlides.filter(item => {
                 const slideText = (item.keywords || "").toLowerCase();
                 return terms.some(term => slideText.includes(term));
@@ -363,17 +368,17 @@
                 return; 
             }
 
-            // 1. Immediately filter matching content slides locally (never id.p)
+            // 1. Filter matching content slides locally with clean stop words
             currentMatches = filterSlidesLocally(prompt);
             currentIndex = 0;
             updateNavigationUI();
 
-            // 2. Immediately execute redirect to top keyword match while AI loads
+            // 2. Immediately jump to the best local slide match
             if (currentMatches.length > 0) {
                 executeRedirect(currentMatches[0]);
             }
 
-            // 3. Trigger AI search & redirect
+            // 3. Trigger AI search
             askAI(prompt);
         }
 
@@ -408,10 +413,9 @@
                     return;
                 }
 
-                // Display answer string directly
                 aiContent.textContent = data.reply || "Unable to retrieve AI answer.";
 
-                // Jump directly to corresponding slide (never id.p)
+                // When AI pinpoints the best slide, limit match pool strictly to relevant target(s)
                 if (data.bestSlideId && data.bestSlideId !== "id.p") {
                     const masterIds = getAllSlideIds();
                     const cleanTarget = data.bestSlideId.replace(/^id\./gi, '');
@@ -420,11 +424,10 @@
                     if (foundMasterIdx !== -1) {
                         const targetId = masterIds[foundMasterIdx];
                         
-                        // Re-sort currentMatches so the AI's top match is ALWAYS #1 in the set (1 of X)
-                        currentMatches = currentMatches.filter(id => id !== targetId);
-                        currentMatches.unshift(targetId);
+                        // Set matches strictly to target slide for 1 of 1 precision
+                        currentMatches = [targetId];
 
-                        currentIndex = 0; // Always start at 1 of X
+                        currentIndex = 0;
                         executeRedirect(targetId);
                     }
                 } else if (currentMatches.length > 0) {
