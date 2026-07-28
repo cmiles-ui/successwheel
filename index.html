@@ -311,20 +311,18 @@
             updateNavigationUI();
         });
 
-        // Strict local filter with expanded stop words to prevent broad matches
+        // Strict local filter: Ignores common conversational filler words and caps local results to MAX 3 slides
         function filterSlidesLocally(query) {
             const masterData = window.slideData || [];
-            
-            // Strictly exclude title slide (id.p) from search results
             const contentSlides = masterData.filter(item => item.id !== "id.p");
 
             if (!query) return contentSlides.map(item => item.id);
 
-            // Comprehensive list of stop words to ignore filler words like "how do I become a"
+            // Ignore ultra-broad words like company, our, feel, employees, who, do, etc.
             const stopWords = new Set([
-                "how", "do", "i", "can", "move", "into", "to", "the", "a", "an", "is", "of", 
+                "how", "do", "we", "i", "can", "move", "into", "to", "the", "a", "an", "is", "of", 
                 "and", "or", "for", "on", "another", "what", "become", "be", "in", "my", "our",
-                "would", "like", "want", "should", "if", "get"
+                "would", "like", "want", "should", "if", "get", "feel", "about", "who", "company", "employees"
             ]);
             
             const terms = query.toLowerCase()
@@ -332,23 +330,28 @@
                 .split(/\s+/)
                 .filter(term => term.length > 2 && !stopWords.has(term));
 
-            if (terms.length === 0) return contentSlides.map(item => item.id);
+            // If query only contained stop words, return top 3 content slides max as placeholder
+            if (terms.length === 0) {
+                return contentSlides.slice(0, 3).map(item => item.id);
+            }
 
-            // 1. Strict match: slides containing ALL core subject terms (e.g. "manager")
+            // 1. Strict match: slides containing ALL specific search terms
             const strictMatches = contentSlides.filter(item => {
                 const slideText = (item.keywords || "").toLowerCase();
                 return terms.every(term => slideText.includes(term));
             }).map(item => item.id);
 
-            if (strictMatches.length > 0) return strictMatches;
+            if (strictMatches.length > 0) {
+                return strictMatches.slice(0, 3); // Max 3
+            }
 
-            // 2. Loose match: slides containing ANY core term
+            // 2. Loose match: slides containing ANY term
             const looseMatches = contentSlides.filter(item => {
                 const slideText = (item.keywords || "").toLowerCase();
                 return terms.some(term => slideText.includes(term));
             }).map(item => item.id);
 
-            return looseMatches;
+            return looseMatches.length > 0 ? looseMatches.slice(0, 3) : contentSlides.slice(0, 3).map(item => item.id);
         }
 
         function handleSearch() {
@@ -368,84 +371,85 @@
                 return; 
             }
 
-            // 1. Filter matching content slides locally with clean stop words
+            // 1. Filter local matches (Hard capped at 3 max)
             currentMatches = filterSlidesLocally(prompt);
             currentIndex = 0;
             updateNavigationUI();
 
-            // 2. Immediately jump to the best local slide match
             if (currentMatches.length > 0) {
                 executeRedirect(currentMatches[0]);
             }
 
-            // 3. Trigger AI search
+            // 2. Trigger AI search to get exact ranked list
             askAI(prompt);
         }
 
-async function askAI(prompt) {
-    const aiCard = document.getElementById('aiCard');
-    const aiContent = document.getElementById('aiAnswerContent');
-    const errorDiv = document.getElementById('errorMessage');
-    if (!aiCard || !aiContent) return;
+        async function askAI(prompt) {
+            const aiCard = document.getElementById('aiCard');
+            const aiContent = document.getElementById('aiAnswerContent');
+            const errorDiv = document.getElementById('errorMessage');
+            if (!aiCard || !aiContent) return;
 
-    if (errorDiv) errorDiv.style.display = "none";
+            if (errorDiv) errorDiv.style.display = "none";
 
-    aiContent.innerHTML = '<div class="dots-loader"><div></div><div></div><div></div></div>';
-    aiCard.style.display = "block";
+            aiContent.innerHTML = '<div class="dots-loader"><div></div><div></div><div></div></div>';
+            aiCard.style.display = "block";
 
-    const masterData = window.slideData || [];
-    const fullContext = masterData.map(item => {
-        const text = item.keywords ? item.keywords.substring(0, 300) : "";
-        return `[Slide ID: ${item.id}]\n${text}`;
-    }).join("\n---\n");
+            const masterData = window.slideData || [];
+            const fullContext = masterData.map(item => {
+                const text = item.keywords ? item.keywords.substring(0, 300) : "";
+                return `[Slide ID: ${item.id}]\n${text}`;
+            }).join("\n---\n");
 
-    try {
-        const response = await fetch(workerUrl, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ prompt, context: fullContext })
-        });
+            try {
+                const response = await fetch(workerUrl, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ prompt, context: fullContext })
+                });
 
-        const data = await response.json();
+                const data = await response.json();
 
-        if (!response.ok || data.error) {
-            aiContent.textContent = "Error: " + (data.error || "Unable to reach Cloudflare Worker.");
-            return;
-        }
-
-        aiContent.textContent = data.reply || "Unable to retrieve AI answer.";
-
-        // Process AI-ranked slide array
-        if (data.rankedSlides && Array.isArray(data.rankedSlides) && data.rankedSlides.length > 0) {
-            const masterIds = getAllSlideIds();
-            const validRanked = [];
-
-            data.rankedSlides.forEach(target => {
-                const cleanTarget = target.replace(/^id\./gi, '');
-                const foundMasterIdx = masterIds.findIndex(id => id.replace(/^id\./gi, '') === cleanTarget);
-                if (foundMasterIdx !== -1) {
-                    validRanked.push(masterIds[foundMasterIdx]);
+                if (!response.ok || data.error) {
+                    aiContent.textContent = "Error: " + (data.error || "Unable to reach Cloudflare Worker.");
+                    return;
                 }
-            });
 
-            if (validRanked.length > 0) {
-                // Overwrite current matches strictly with AI's ranked order
-                currentMatches = validRanked;
-                currentIndex = 0;
-                executeRedirect(currentMatches[0]);
+                aiContent.textContent = data.reply || "Unable to retrieve AI answer.";
+
+                // Process AI-ranked slides (Support both array and fallback single ID)
+                let targetSlides = [];
+
+                if (data.rankedSlides && Array.isArray(data.rankedSlides) && data.rankedSlides.length > 0) {
+                    targetSlides = data.rankedSlides;
+                } else if (data.bestSlideId && data.bestSlideId !== "id.p") {
+                    targetSlides = [data.bestSlideId];
+                }
+
+                if (targetSlides.length > 0) {
+                    const masterIds = getAllSlideIds();
+                    const validRanked = [];
+
+                    targetSlides.forEach(target => {
+                        const cleanTarget = target.replace(/^id\./gi, '');
+                        const foundMasterIdx = masterIds.findIndex(id => id.replace(/^id\./gi, '') === cleanTarget);
+                        if (foundMasterIdx !== -1) {
+                            validRanked.push(masterIds[foundMasterIdx]);
+                        }
+                    });
+
+                    if (validRanked.length > 0) {
+                        // Strictly replace matches with the AI's ranked slides (Max 3-5 slides)
+                        currentMatches = validRanked.slice(0, 5);
+                        currentIndex = 0;
+                        executeRedirect(currentMatches[0]);
+                    }
+                }
+
+            } catch (err) {
+                aiContent.textContent = "Error connecting to AI service. Ensure your Worker URL is configured correctly.";
             }
-        } else if (currentMatches.length > 0) {
-            currentIndex = 0;
-            executeRedirect(currentMatches[0]);
         }
-
-    } catch (err) {
-        aiContent.textContent = "Error connecting to AI service. Ensure your Worker URL is configured correctly.";
-        if (currentMatches.length > 0) {
-            executeRedirect(currentMatches[0]);
-        }
-    }
-}
 
         function closeAICard() {
             const aiCard = document.getElementById('aiCard');
