@@ -296,7 +296,7 @@
                 iframe.src = baseUrl + "&slide=" + defaultSlide;
             }
 
-            // Clean up the URL parameter on refresh so it stays clean
+            // Clean up the URL parameter on refresh
             const currentUrlWithoutParams = window.location.href.split('?')[0];
             history.replaceState({slide: defaultSlide}, '', currentUrlWithoutParams);
 
@@ -315,7 +315,6 @@
             updateNavigationUI();
         });
 
-        // Unified Search Handler (All searches trigger AI)
         function handleSearch() {
             const inputField = document.getElementById('searchInput');
             if (!inputField) return;
@@ -348,9 +347,12 @@
             aiContent.innerHTML = '<div class="dots-loader"><div></div><div></div><div></div></div>';
             aiCard.style.display = "block";
 
-            // Extract all text context from slideData
+            // Optimized Light Payload: Truncate long slide strings to 300 chars max
             const masterData = window.slideData || [];
-            const fullContext = masterData.map(item => `[Slide ID: ${item.id}]\n${item.keywords}`).join("\n---\n");
+            const fullContext = masterData.map(item => {
+                const text = item.keywords ? item.keywords.substring(0, 300) : "";
+                return `[Slide ID: ${item.id}]\n${text}`;
+            }).join("\n---\n");
 
             try {
                 const response = await fetch(workerUrl, {
@@ -366,10 +368,10 @@
                     return;
                 }
                 
-                // 1. Display the written answer
+                // Display the rapid answer
                 aiContent.textContent = data.reply || "Unable to retrieve AI answer.";
 
-                // 2. Automatically jump to the corresponding slide
+                // Jump directly to corresponding slide
                 if (data.bestSlideId) {
                     const masterIds = getAllSlideIds();
                     const foundIdx = masterIds.findIndex(id => id.replace(/^id\./gi, '') === data.bestSlideId.replace(/^id\./gi, ''));
