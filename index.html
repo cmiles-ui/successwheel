@@ -130,7 +130,7 @@
         .match-count {
             font-size: 13px;
             color: #e8eaed;
-            min-width: 70px;
+            min-width: 80px;
             text-align: center;
             font-weight: 500;
         }
@@ -369,18 +369,19 @@
                 currentMatches = getAllSlideIds();
                 currentIndex = 0;
                 sessionStorage.clear();
-                executeRedirect(currentMatches[0] || 'id.p');
+                executeRedirect(currentMatches[0] || getTitleSlideId());
                 return; 
             }
 
-            currentMatches = filterSlidesLocally(prompt);
-            currentIndex = 0;
-            updateNavigationUI();
-
-            if (currentMatches.length > 0) {
-                executeRedirect(currentMatches[0]);
+            // Show analyzing state on navigation controls without jumping slides
+            const navControls = document.getElementById('navControls');
+            const matchCountLabel = document.getElementById('matchCount');
+            if (navControls && matchCountLabel) {
+                navControls.style.display = 'flex';
+                matchCountLabel.textContent = "Analyzing...";
             }
 
+            // Execute AI Search directly (Only redirects once AI returns)
             askAI(prompt);
         }
 
@@ -412,6 +413,7 @@
 
                 if (!response.ok || data.error) {
                     aiContent.textContent = "Error: " + (data.error || "Unable to reach Cloudflare Worker.");
+                    applyFallbackLocalSearch(prompt);
                     return;
                 }
 
@@ -451,12 +453,27 @@
                         currentMatches = validRanked.slice(0, 5);
                         currentIndex = 0;
                         executeRedirect(currentMatches[0]);
+                        updateNavigationUI();
+                        return;
                     }
                 }
 
+                // Fallback if AI returned no matching slide IDs
+                applyFallbackLocalSearch(prompt);
+
             } catch (err) {
                 aiContent.textContent = "Error connecting to AI service. Ensure your Worker URL is configured correctly.";
+                applyFallbackLocalSearch(prompt);
             }
+        }
+
+        function applyFallbackLocalSearch(prompt) {
+            currentMatches = filterSlidesLocally(prompt);
+            currentIndex = 0;
+            if (currentMatches.length > 0) {
+                executeRedirect(currentMatches[0]);
+            }
+            updateNavigationUI();
         }
 
         function closeAICard() {
