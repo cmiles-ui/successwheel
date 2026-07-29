@@ -271,7 +271,6 @@
     </div>
 
     <script>
-        // Formatted embed URL using minimal controls mode to avoid permission errors
         const baseUrl = "https://docs.google.com/presentation/d/16m363rm8KbODBF4_73Jt824KoW6NaEQsueUZ_LTdyFU/embed?start=false&loop=false&delayms=3000&rm=minimal";
         const workerUrl = "https://successwheel-ai.cmiles.workers.dev"; 
 
@@ -292,16 +291,15 @@
         }
 
         document.addEventListener("DOMContentLoaded", function() {
-            const iframe = document.getElementById('slidesIframe');
-            const urlParams = new URLSearchParams(window.location.search);
-            const initialSlideParam = urlParams.get('slide');
+            // Strips query parameters from the browser address bar on load or refresh
+            if (window.location.search) {
+                history.replaceState(null, '', window.location.pathname);
+            }
 
+            // Always load Slide 1 on fresh page load
+            const iframe = document.getElementById('slidesIframe');
             if (iframe) {
-                if (initialSlideParam) {
-                    iframe.src = baseUrl + "&slide=" + initialSlideParam;
-                } else {
-                    iframe.src = baseUrl;
-                }
+                iframe.src = baseUrl;
             }
 
             const inputField = document.getElementById('searchInput');
@@ -312,6 +310,7 @@
                 });
             }
 
+            closeAICard();
             sessionStorage.clear();
             currentMatches = getAllSlideIds();
             currentIndex = 0;
