@@ -291,15 +291,18 @@
         }
 
         document.addEventListener("DOMContentLoaded", function() {
-            const defaultSlide = getTitleSlideId();
-
             const iframe = document.getElementById('slidesIframe');
-            if (iframe) {
-                iframe.src = baseUrl + "&slide=" + defaultSlide;
-            }
+            const urlParams = new URLSearchParams(window.location.search);
+            const initialSlideParam = urlParams.get('slide');
 
-            const currentUrlWithoutParams = window.location.href.split('?')[0];
-            history.replaceState({slide: defaultSlide}, '', currentUrlWithoutParams);
+            if (iframe) {
+                if (initialSlideParam) {
+                    iframe.src = baseUrl + "&slide=" + initialSlideParam;
+                } else {
+                    // Load clean URL on startup so internal slide hyperlinks work as expected
+                    iframe.src = baseUrl;
+                }
+            }
 
             const inputField = document.getElementById('searchInput');
             if (inputField) {
@@ -369,11 +372,10 @@
                 currentMatches = getAllSlideIds();
                 currentIndex = 0;
                 sessionStorage.clear();
-                executeRedirect(currentMatches[0] || getTitleSlideId());
+                executeRedirect(getTitleSlideId());
                 return; 
             }
 
-            // Show analyzing state on navigation controls without jumping slides
             const navControls = document.getElementById('navControls');
             const matchCountLabel = document.getElementById('matchCount');
             if (navControls && matchCountLabel) {
@@ -381,7 +383,6 @@
                 matchCountLabel.textContent = "Analyzing...";
             }
 
-            // Execute AI Search directly (Only redirects once AI returns)
             askAI(prompt);
         }
 
@@ -458,7 +459,6 @@
                     }
                 }
 
-                // Fallback if AI returned no matching slide IDs
                 applyFallbackLocalSearch(prompt);
 
             } catch (err) {
